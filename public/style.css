@@ -1,0 +1,26 @@
+* {
+    scroll-behavior: smooth;
+}
+nav {
+    position: sticky;
+    top: 0;
+    z-index: 1;
+}
+.avatar {
+    height: 60px;
+    width: 60px;
+}
+.menu {
+    text-decoration: none;
+}
+
+.nav-item:hover {
+    background:rgba(230, 89, 81, .6);
+}
+
+#map {
+    height: 500px;
+    width: 90%;
+    justify-self: center;
+    z-index: 0;
+}

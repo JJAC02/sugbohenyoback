@@ -1,0 +1,62 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Sugbo Henyo</title>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.13.1/font/bootstrap-icons.min.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/7.0.1/css/all.min.css">
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.8/dist/css/bootstrap.min.css" rel="stylesheet"
+        integrity="sha384-sRIl4kxILFvY47J16cr9ZwB07vP4J8+LH7qKQnuqkuIAvNWLzeN8tE5YBujZqJLB" crossorigin="anonymous">
+    <link rel="stylesheet" href="style.css">
+     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"
+     integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY="
+     crossorigin=""/>
+     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"
+     integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo="
+     crossorigin=""></script>
+</head>
+
+<body>
+    <nav class="container-fluid text-center d-flex align-items-center justify-content-between bg-light">
+        <div class="d-flex fs-4 menu">
+            <div class="nav-item p-4">HOME</div>
+            <div class="nav-item p-4">GAMES</div>
+            <a href="#im"><div class="nav-item p-4">INTERACTIVE MAP</div></a>
+        </div>  
+        <div class="rounded-circle overflow-hidden avatar">
+            <img src="https://tse2.mm.bing.net/th/id/OIP.so5s5QgNUgKSgouiR2R1zQHaHa?rs=1&pid=ImgDetMain&o=7&rm=3"
+                class="object-fit-cover h-100 w-100">
+        </div>
+    </nav>
+    <section style="height: 90vh;">
+        <h1>Users</h1>
+        <ul id="user-list"></ul>
+
+        <script src="app.js"></script>
+    </section>
+
+
+    <section id="im" style="height: 100vh;">
+        <h1>Interactive Map</h1>
+         <div id="map"></div>
+    </section>
+    <section style="height: 90vh;">
+        
+    </section>
+    <script>
+        var map = L.map('map').setView([10.2926, 123.9022],20);
+        L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png', {
+    maxZoom: 19,
+    attribution: '&copy; <a href="http://www.openstreetmap.org/copyright">OpenStreetMap</a>'
+}).addTo(map);
+var popup = L.popup()
+    .setLatLng([10.31111, 124.01528])
+    .setContent("Mactan Shrine.")
+    .openOn(map);
+    </script>
+
+</body>
+
+</html>
