@@ -1,10 +1,48 @@
 // server.js
 const express = require('express');
-const pool = require('./db');
+//  
 const path = require('path');
+const bcrypt = require('bcrypt');
+const mysql = require('mysql2/promise');
+require('dotenv').config();
+
+const pool = mysql.createPool({
+  host: process.env.DB_HOST,
+  port: process.env.DB_PORT,
+  user: process.env.DB_USERNAME,
+  password: process.env.DB_PASSWORD,
+  database: process.env.DB_NAME,
+});
+
+module.exports = pool;
+
+
 
 const app = express();
 app.use(express.json());
+//created by JP - to be studied
+app.post('/api/createUser', async (req, res) => {
+  const {email, pass, fname, lname } = req.body;
+  console.log('ran create');
+  const passHash = await bcrypt.hash(pass, 10);
+  try{
+    const [rows] = await pool.execute(
+      `INSERT INTO users (email, first_name, last_name, password_hash) VALUES (?, ?, ?, ?)`,
+      [email, fname, lname, passHash ]
+    );
+    console.log('sumakses'
+    );
+    return res.json({goods: 1});
+  } catch (err){
+    console.log(err);
+    return res.json({error: err.message, goods: 0});
+  } finally{
+
+  }
+});
+
+
+
 app.use(express.static('public')); // serves public folder
 
 // Serve main.html at root
@@ -37,18 +75,20 @@ app.get('/users/:id', async (req, res) => {
 });
 
 // Create user
-app.post('/users', async (req, res) => {
-  const { email, first_name, last_name } = req.body;
-  try {
-    const [result] = await pool.execute(
-      'INSERT INTO users (email, first_name, last_name) VALUES (?, ?, ?)',
-      [email, first_name, last_name]
-    );
-    res.status(201).json({ id: result.insertId });
-  } catch (err) {
-    res.status(500).json({ error: err.message });
-  }
-});
+// app.post('/users', async (req, res) => {
+//   const { email, first_name, last_name } = req.body;
+//   try {
+//     const [result] = await pool.execute(
+//       'INSERT INTO users (email, first_name, last_name) VALUES (?, ?, ?)',
+//       [email, first_name, last_name]
+//     );
+//     res.status(201).json({ id: result.insertId });
+//   } catch (err) {
+//     res.status(500).json({ error: err.message });
+//   }
+// });
+
+
 
 const PORT = process.env.PORT || 3000;
 app.listen(PORT, () => console.log(`Server running on http://localhost:${PORT}`));

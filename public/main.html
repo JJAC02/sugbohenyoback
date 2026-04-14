@@ -30,8 +30,22 @@
                 class="object-fit-cover h-100 w-100">
         </div>
     </nav>
-    <section style="height: 90vh;">
+    <section style="height: 90vh; margin-left: 20px;">
         <h1>Users</h1>
+        <form id="jerson">
+             <h2>Email:</h2>
+        <input type="email" id="email" name="email">
+        <h2>First Name:</h2>
+        <input type="text" id="first_name" name="fname" required>
+        <h2>Family Name:</h2>
+        <input type="text" id="last_name" name="lname" required>
+        <h2>Password:</h2>
+        <input type="password" id="password" name="password" required>
+
+        <button type="submit">Sign Up</button>
+
+        </form>
+       
         <ul id="user-list"></ul>
 
         <script src="app.js"></script>
