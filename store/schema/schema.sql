@@ -60,7 +60,11 @@ CREATE TABLE question (
   CREATE TABLE session (
 	session_id     INT           PRIMARY KEY AUTO_INCREMENT,
 	user_id        INT           NOT NULL,
-
+	session_token  VARCHAR(255)  NOT NULL,
+	created_at     DATETIME(6)   NOT NULL DEFAULT CURRENT_TIMESTAMP,
+	expires_at     DATETIME(6)   ,
+	is_active      BOOLEAN       DEFAULT TRUE,
+	
 	CONSTRAINT fk_session_user
 	FOREIGN KEY(user_id) REFERENCES users(user_id)
 ) ENGINE=InnoDB

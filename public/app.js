@@ -44,3 +44,17 @@ console.log('added');
 
 
   })
+
+  async function loadImage() {
+    fetch('/api/getImage/1/2')
+      .then(res => res.json())
+      .then(data => {
+        document.getElementById("testimage").src = data.image;
+      });
+
+    // const res = await fetch('api/getImage/1/1');
+    // console.log('working');
+    // const data = await res.json();
+
+    // document.getElementById("testimage").src = data.iamge;
+  }

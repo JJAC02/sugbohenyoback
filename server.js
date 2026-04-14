@@ -88,6 +88,31 @@ app.get('/users/:id', async (req, res) => {
 //   }
 // });
 
+app.use(express.static('images'));
+
+app.get('/api/getImage/:id/:wid',async (req,res) => {
+  try {
+    const id = req.params.id;
+    const wid = req.params.wid;
+    console.log('ids are set')
+    const [rows] = await pool.execute(
+    'SELECT picture_url FROM images WHERE image_id =? AND word_id = ?', [id, wid]
+  );
+  
+    if (rows.length === 0) {
+    return res.status(404).json({ message: "Image not found" });
+  }
+    res.json({
+      image: rows[0].picture_url
+    });
+
+    } catch (error) {
+    console.error(error);
+    res.status(500).json({ message: "Server error" });
+  }
+});
+
+
 
 
 const PORT = process.env.PORT || 3000;
