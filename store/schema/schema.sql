@@ -50,8 +50,8 @@ CREATE TABLE question (
   CREATE TABLE answers (
 	answer_id     INT           PRIMARY KEY AUTO_INCREMENT,
 	question_id   INT           NOT NULL,
-	answer        TEXT          NOT NULL,
-	is_correct    BOOLEAN       NOT NULL
+	answer        TEXT          NOT NULL
+
 ) ENGINE=InnoDB
   DEFAULT CHARSET=utf8mb4
   COLLATE=utf8mb4_unicode_ci;
@@ -66,3 +66,26 @@ CREATE TABLE question (
 ) ENGINE=InnoDB
   DEFAULT CHARSET=utf8mb4
   COLLATE=utf8mb4_unicode_ci;
+
+
+CREATE TABLE words (
+    word_id          INT          PRIMARY KEY AUTO_INCREMENT,
+    word_answer      VARCHAR(30)  NOT NULL
+
+)ENGINE = InnoDB
+DEFAULT CHARSET=utf8mb4
+COLLATE=utf8mb4_unicode_ci;
+
+
+CREATE TABLE images (
+    image_id    INT          PRIMARY KEY AUTO_INCREMENT,
+    word_id     INT          NOT NULL,
+    picture_url VARCHAR(255) NOT NULL,
+    description TEXT         NOT NULL,
+    
+    CONSTRAINT fk_images_word
+    FOREIGN KEY(word_id) REFERENCES words(word_id)
+
+)ENGINE = InnoDB
+DEFAULT CHARSET=utf8mb4
+COLLATE=utf8mb4_unicode_ci;
