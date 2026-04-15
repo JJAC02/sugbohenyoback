@@ -18,9 +18,10 @@ module.exports = pool;
 
 
 
+
 const app = express();
 app.use(express.json());
-//created by JP - to be studied
+//Telling the database to create the user
 app.post('/api/createUser', async (req, res) => {
   const {email, pass, fname, lname } = req.body;
   console.log('ran create');
@@ -43,6 +44,8 @@ app.post('/api/createUser', async (req, res) => {
 
 
 
+
+app.use(express.static('images'));
 app.use(express.static('public')); // serves public folder
 
 // Serve main.html at root
@@ -74,30 +77,16 @@ app.get('/users/:id', async (req, res) => {
   }
 });
 
-// Create user
-// app.post('/users', async (req, res) => {
-//   const { email, first_name, last_name } = req.body;
-//   try {
-//     const [result] = await pool.execute(
-//       'INSERT INTO users (email, first_name, last_name) VALUES (?, ?, ?)',
-//       [email, first_name, last_name]
-//     );
-//     res.status(201).json({ id: result.insertId });
-//   } catch (err) {
-//     res.status(500).json({ error: err.message });
-//   }
-// });
-
-app.use(express.static('images'));
 
 app.get('/api/getImage/:id/:wid',async (req,res) => {
   try {
     const id = req.params.id;
     const wid = req.params.wid;
-    console.log('ids are set')
+    console.log('ids are set', id, wid);
     const [rows] = await pool.execute(
     'SELECT picture_url FROM images WHERE image_id =? AND word_id = ?', [id, wid]
   );
+    console.log(rows[0].picture_url);
   
     if (rows.length === 0) {
     return res.status(404).json({ message: "Image not found" });
@@ -114,6 +103,10 @@ app.get('/api/getImage/:id/:wid',async (req,res) => {
 
 
 
+app.use((req, res, next) => {
+  console.log(req.method, req.url);
+  next();
+});
 
 const PORT = process.env.PORT || 3000;
 app.listen(PORT, () => console.log(`Server running on http://localhost:${PORT}`));

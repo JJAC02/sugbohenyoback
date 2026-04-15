@@ -1,22 +1,4 @@
-// frontend/app.js
-
-// Fetch all users from your Express server
-// async function getUsers() {
-//   const response = await fetch('/users');
-//   const users = await response.json();
-
-//   const list = document.getElementById('user-list');
-//   users.forEach(user => {
-//     const li = document.createElement('li');
-//     li.textContent = `${user.first_name} — ${user.email}`;
-//     list.appendChild(li);
-//   });
-// }
-
-// getUsers();
-
-
-//created by JP - to study!!
+//Connecting to Node.js to create the user, passing values
 const form = document.getElementById('jerson');
 
 form.addEventListener("submit", async (e) => {
@@ -46,7 +28,9 @@ console.log('added');
   })
 
   async function loadImage() {
-    fetch('/api/getImage/1/2')
+    const id = 1;
+  
+    fetch('/api/getImage/1/1')
       .then(res => res.json())
       .then(data => {
         document.getElementById("testimage").src = data.image;
