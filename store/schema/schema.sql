@@ -58,9 +58,8 @@ CREATE TABLE question (
 
 
   CREATE TABLE session (
-	session_id     INT           PRIMARY KEY AUTO_INCREMENT,
+	session_token  VARCHAR(255)  PRIMARY KEY,
 	user_id        INT           NOT NULL,
-	session_token  VARCHAR(255)  NOT NULL,
 	created_at     DATETIME(6)   NOT NULL DEFAULT CURRENT_TIMESTAMP,
 	expires_at     DATETIME(6)   ,
 	is_active      BOOLEAN       DEFAULT TRUE,

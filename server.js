@@ -45,12 +45,16 @@ app.post('/api/createUser', async (req, res) => {
 
 
 
-app.use(express.static('images'));
+
 app.use(express.static('public')); // serves public folder
 
 // Serve main.html at root
 app.get('/', (req, res) => {
-  res.sendFile(path.join(__dirname, 'public', 'main.html'));
+  res.sendFile(path.join(__dirname, 'public','external-repo', 'sugbo henyo web dev', 'landing.html'));
+});
+
+app.get('/signup', (req, res) => {
+  res.sendFile(path.join(__dirname, 'public/external-repo/sugbo henyo web dev/signup.html'));
 });
 
 // Get all users
