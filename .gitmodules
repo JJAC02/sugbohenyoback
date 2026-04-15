@@ -1,0 +1,3 @@
+[submodule "public/external-repo"]
+	path = public/external-repo
+	url = https://github.com/liyajayme/sugbohenyo.git
