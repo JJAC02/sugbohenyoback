@@ -92,3 +92,13 @@ CREATE TABLE images (
 )ENGINE = InnoDB
 DEFAULT CHARSET=utf8mb4
 COLLATE=utf8mb4_unicode_ci;
+
+CREATE TABLE locations (
+    loc_id      INT          PRIMARY KEY AUTO_INCREMENT,
+    loc_name    VARCHAR(255) NOT NULL,
+    longitude   DOUBLE       NOT NULL,
+    latitude    DOUBLE       NOT NULL
+
+)ENGINE = InnoDB
+DEFAULT CHARSET=utf8mb4
+COLLATE=utf8mb4_unicode_ci;

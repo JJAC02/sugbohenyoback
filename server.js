@@ -48,13 +48,21 @@ app.post('/api/createUser', async (req, res) => {
 
 app.use(express.static('public')); // serves public folder
 
-// Serve main.html at root
+//serve main at root
+// app.get('/', (req, res) => {
+//   res.sendFile(path.join(__dirname, 'public', 'main.html'));
+// });
+
 app.get('/', (req, res) => {
-  res.sendFile(path.join(__dirname, 'public','external-repo', 'sugbo henyo web dev', 'landing.html'));
+  res.sendFile(path.join(__dirname, 'public', 'external-repo', 'landing.html'));
 });
 
 app.get('/signup', (req, res) => {
-  res.sendFile(path.join(__dirname, 'public/external-repo/sugbo henyo web dev/signup.html'));
+  res.sendFile(path.join(__dirname, 'public/external-repo/signup.html'));
+});
+
+app.get('/login', (req, res) => {
+  res.sendFile(path.join(__dirname, 'public/external-repo/login.html'));
 });
 
 // Get all users
