@@ -8,6 +8,7 @@ CREATE TABLE users (
 	last_name     VARCHAR(255)   NOT NULL,
 	password_hash VARBINARY(255) NOT NULL,
 	deleted_at    DATETIME(6)    ,
+	profile_url   VARCHAR(25)    NULL,
 	description   TEXT
 
 ) ENGINE=InnoDB
@@ -99,6 +100,20 @@ CREATE TABLE locations (
     loc_name    VARCHAR(255) NOT NULL,
     longitude   DOUBLE       NOT NULL,
     latitude    DOUBLE       NOT NULL
+
+)ENGINE = InnoDB
+DEFAULT CHARSET=utf8mb4
+COLLATE=utf8mb4_unicode_ci;
+
+CREATE TABLE quiz_progress (
+	user_id     INT         NOT NULL,
+	quiz_id     INT         NOT NULL,
+	score       DOUBLE      NULL,
+	is_complete TINYINT(1)  DEFAULT 0,
+
+	CONSTRAINT pk_user_quiz PRIMARY KEY(user_id, quiz_id),
+	FOREIGN KEY (user_id) REFERENCES users(user_id),
+	FOREIGN KEY (quiz_id) REFERENCES quiz(quiz_id)
 
 )ENGINE = InnoDB
 DEFAULT CHARSET=utf8mb4
