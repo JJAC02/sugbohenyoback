@@ -46,6 +46,36 @@ app.post('/api/createUser', async (req, res) => {
 //   const {newUser} = req.body;
 //   const passHash = await bcrypt.hash(pass, 10);
 
+app.post('/api/loginUser',async (req, res) => {
+  try {
+    const {pass, uname } = req.body;
+  console.log('ran login', uname);
+  
+  const [rows] = await pool.execute(
+    'SELECT username,password_hash FROM users WHERE username = ?', [uname]
+  );
+
+  console.log('found rows: ',rows.length);
+  if (rows.length === 0) {
+  console.log("User not found");
+  return res.status(404).json({message: "User not found"});
+  }
+  const user = rows[0];
+
+  console.log('comparing passwords');
+  const isMatch = await bcrypt.compare(pass,user.password_hash);
+  if (isMatch) {
+      return res.json({ success: true, user: user.username });
+    } else {
+      return res.status(401).json({ success: false, message: "Invalid username or password" });
+    }
+
+  } catch(err) {
+    console.error('LOGIN ERROR',err);
+    return res.status(500).json({ message: "Server error" });
+  }
+})
+
 
 // })
 
