@@ -1,19 +1,24 @@
 //Connecting to Node.js to create the user, passing values
-const form = document.getElementById('jerson');
+const form = document.getElementById('signup-form');
 
 form.addEventListener("submit", async (e) => {
   e.preventDefault();
-console.log('added');
-  const email = form.email.value;
-  const pass = form.password.value;
+
+  if(form.pword.value === form.cpword.value){
+
+console.log('Processing Creation of Account');
+  const email = form.emailad.value;
+  const pass = form.pword.value;
   const fname = form.fname.value;
   const lname = form.lname.value;
+  const uname = form.uname.value;
+  const points = 0;
 
-  console.log(email, pass, fname, lname);
+  console.log(email, pass, fname, lname, uname, points);
   const res = await fetch('/api/createUser', {
     method: 'POST',
     headers: ({"Content-Type" : "application/json"}),
-    body: JSON.stringify({ email, pass, fname, lname}) 
+    body: JSON.stringify({ email, pass, fname, lname, uname, points}) 
   });
 
   const data = await res.json();
@@ -23,6 +28,9 @@ console.log('added');
   } else{
     window.alert(data.error);
   }
+} else {
+   alert("Password Do Not Match");
+}
 
 
   })
@@ -42,3 +50,4 @@ console.log('added');
 
     // document.getElementById("testimage").src = data.iamge;
   }
+  

@@ -23,13 +23,13 @@ const app = express();
 app.use(express.json());
 //Telling the database to create the user
 app.post('/api/createUser', async (req, res) => {
-  const {email, pass, fname, lname } = req.body;
+  const {email, pass, fname, lname, uname, points } = req.body;
   console.log('ran create');
   const passHash = await bcrypt.hash(pass, 10);
   try{
     const [rows] = await pool.execute(
-      `INSERT INTO users (email, first_name, last_name, password_hash) VALUES (?, ?, ?, ?)`,
-      [email, fname, lname, passHash ]
+      `INSERT INTO users (email, first_name, last_name, username, password_hash,user_points) VALUES (?, ?, ?, ?, ?, ?)`,
+      [email, fname, lname, uname, passHash, points]
     );
     console.log('sumakses'
     );
@@ -41,6 +41,13 @@ app.post('/api/createUser', async (req, res) => {
 
   }
 });
+
+// app.post ('/api/createUser', async (req,res) => {
+//   const {newUser} = req.body;
+//   const passHash = await bcrypt.hash(pass, 10);
+
+
+// })
 
 
 
@@ -58,11 +65,11 @@ app.get('/', (req, res) => {
 });
 
 app.get('/signup', (req, res) => {
-  res.sendFile(path.join(__dirname, 'public/external-repo/signup.html'));
+  res.sendFile(path.join(__dirname, 'public', 'external-repo', 'signup.html'));
 });
 
 app.get('/login', (req, res) => {
-  res.sendFile(path.join(__dirname, 'public/external-repo/login.html'));
+  res.sendFile(path.join(__dirname, 'public', 'external-repo', 'login.html'));
 });
 
 // Get all users

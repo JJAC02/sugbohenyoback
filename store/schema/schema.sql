@@ -9,6 +9,7 @@ CREATE TABLE users (
 	password_hash VARBINARY(255) NOT NULL,
 	deleted_at    DATETIME(6)    ,
 	profile_url   VARCHAR(25)    NULL,
+	user_points   INT            NULL,
 	description   TEXT
 
 ) ENGINE=InnoDB
