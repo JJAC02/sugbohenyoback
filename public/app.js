@@ -71,7 +71,7 @@ if (lform) {  // ✅ Only run if login form exists
     if(data.success){
       console.log('login successful');
       // Redirect to main page or dashboard
-      window.location.href = '/';
+      window.location.href = '/index';
     } else {
       window.alert(data.message);
     }

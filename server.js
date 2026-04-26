@@ -16,11 +16,33 @@ const pool = mysql.createPool({
 
 module.exports = pool;
 
-
-
-
 const app = express();
+
 app.use(express.json());
+
+
+app.use(express.static('public', {
+  setHeaders: (res, filePath) => {
+    // Fix MIME types for JavaScript files
+    if (filePath.endsWith('.js')) {
+      res.setHeader('Content-Type', 'application/javascript');
+    } else if (filePath.endsWith('.mjs')) {
+      res.setHeader('Content-Type', 'application/javascript');
+    } else if (filePath.endsWith('.json')) {
+      res.setHeader('Content-Type', 'application/json');
+    } else if (filePath.endsWith('.css')) {
+      res.setHeader('Content-Type', 'text/css');
+    }
+  }
+}));
+
+app.use('/phaser', express.static(path.join(__dirname, 'node_modules/phaser/dist')));
+
+app.use((req, res, next) => {
+  console.log(req.method, req.url);
+  next();
+});
+
 //Telling the database to create the user
 app.post('/api/createUser', async (req, res) => {
   const {email, pass, fname, lname, uname, points } = req.body;
@@ -31,7 +53,7 @@ app.post('/api/createUser', async (req, res) => {
       `INSERT INTO users (email, first_name, last_name, username, password_hash,user_points) VALUES (?, ?, ?, ?, ?, ?)`,
       [email, fname, lname, uname, passHash, points]
     );
-    console.log('sumakses'
+    console.log('success'
     );
     return res.json({goods: 1});
   } catch (err){
@@ -62,8 +84,25 @@ app.post('/api/loginUser',async (req, res) => {
   }
   const user = rows[0];
 
-  console.log('comparing passwords');
-  const isMatch = await bcrypt.compare(pass,user.password_hash);
+  console.log({
+  pass,
+  passType: typeof pass,
+  hash: user.password_hash,
+  hashType: typeof user.password_hash
+});
+
+// if (!pass || typeof pass !== 'string') {
+//   return res.status(400).json({ message: "Invalid password input" });
+// }
+
+// if (!user.password_hash || typeof user.password_hash !== 'string') {
+//   console.error('Invalid hash in DB:', user.password_hash);
+//   return res.status(500).json({ message: "Corrupted user data" });
+// }
+
+  const hash = user.password_hash.toString();
+
+  const isMatch = await bcrypt.compare(pass,hash);
   if (isMatch) {
       return res.json({ success: true, user: user.username });
     } else {
@@ -78,29 +117,12 @@ app.post('/api/loginUser',async (req, res) => {
 
 
 // })
-
-
-
-
-
-app.use(express.static('public')); // serves public folder
-
 //serve main at root
 // app.get('/', (req, res) => {
 //   res.sendFile(path.join(__dirname, 'public', 'main.html'));
 // });
 
-app.get('/', (req, res) => {
-  res.sendFile(path.join(__dirname, 'public', 'external-repo', 'landing.html'));
-});
 
-app.get('/signup', (req, res) => {
-  res.sendFile(path.join(__dirname, 'public', 'external-repo', 'signup.html'));
-});
-
-app.get('/login', (req, res) => {
-  res.sendFile(path.join(__dirname, 'public', 'external-repo', 'login.html'));
-});
 
 // Get all users
 app.get('/users', async (req, res) => {
@@ -150,12 +172,40 @@ app.get('/api/getImage/:id/:wid',async (req,res) => {
   }
 });
 
-
-
-app.use((req, res, next) => {
-  console.log(req.method, req.url);
-  next();
+app.get('/', (req, res) => {
+  res.sendFile(path.join(__dirname, 'public', 'external-repo', 'landing.html'));
 });
+
+app.get('/signup', (req, res) => {
+  res.sendFile(path.join(__dirname, 'public', 'external-repo', 'signup.html'));
+});
+
+app.get('/login', (req, res) => {
+  res.sendFile(path.join(__dirname, 'public', 'external-repo', 'login.html'));
+});
+
+app.get('/index', (req, res) => {
+  res.sendFile(path.join(__dirname, 'public', 'external-repo', 'index.html'));
+});
+
+app.get('/streetview', (req, res) => {
+  res.sendFile(path.join(__dirname, 'public', 'external-repo', 'streetview.html'));
+});
+
+app.get('/adventure', (req, res) => {
+  res.sendFile(path.join(__dirname, 'public', 'external-repo', 'adventure.html'));
+});
+
+app.get('/ag1', (req, res) => {
+  res.sendFile(path.join(__dirname, 'public', 'external-repo', 'game', 'level1.html'));
+});
+
+
+//  Moved up
+// app.use((req, res, next) => {
+//   console.log(req.method, req.url);
+//   next();
+// });
 
 const PORT = process.env.PORT || 3000;
 app.listen(PORT, () => console.log(`Server running on http://localhost:${PORT}`));
