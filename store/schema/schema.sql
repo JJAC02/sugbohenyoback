@@ -59,21 +59,6 @@ CREATE TABLE question (
   DEFAULT CHARSET=utf8mb4
   COLLATE=utf8mb4_unicode_ci;
 
-
-  CREATE TABLE session (
-	session_token  VARCHAR(255)  PRIMARY KEY,
-	user_id        INT           NOT NULL,
-	created_at     DATETIME(6)   NOT NULL DEFAULT CURRENT_TIMESTAMP,
-	expires_at     DATETIME(6)   ,
-	is_active      BOOLEAN       DEFAULT TRUE,
-	
-	CONSTRAINT fk_session_user
-	FOREIGN KEY(user_id) REFERENCES users(user_id)
-) ENGINE=InnoDB
-  DEFAULT CHARSET=utf8mb4
-  COLLATE=utf8mb4_unicode_ci;
-
-
 CREATE TABLE words (
     word_id          INT          PRIMARY KEY AUTO_INCREMENT,
     word_answer      VARCHAR(30)  NOT NULL
@@ -115,6 +100,17 @@ CREATE TABLE quiz_progress (
 	CONSTRAINT pk_user_quiz PRIMARY KEY(user_id, quiz_id),
 	FOREIGN KEY (user_id) REFERENCES users(user_id),
 	FOREIGN KEY (quiz_id) REFERENCES quiz(quiz_id)
+
+)ENGINE = InnoDB
+DEFAULT CHARSET=utf8mb4
+COLLATE=utf8mb4_unicode_ci;
+
+CREATE TABLE exploration (
+	explore_id   INT     PRIMARY KEY,
+	user_id      INT     NOT NULL,
+	
+	CONSTRAINT fk_explore_user
+    FOREIGN KEY(user_id) REFERENCES users(user_id)
 
 )ENGINE = InnoDB
 DEFAULT CHARSET=utf8mb4

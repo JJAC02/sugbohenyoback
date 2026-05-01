@@ -1,6 +1,8 @@
 // server.js
 const express = require('express');
 //  
+const session = require('express-session');
+const MySQLStore = require('express-mysql-session')(session);
 const path = require('path');
 const bcrypt = require('bcrypt');
 const mysql = require('mysql2/promise');
@@ -12,14 +14,53 @@ const pool = mysql.createPool({
   user: process.env.DB_USERNAME,
   password: process.env.DB_PASSWORD,
   database: process.env.DB_NAME,
+  waitForConnections: true,
+  connectionLimit: 10
 });
 
 module.exports = pool;
 
+//Session Store
+const sessionStore = new MySQLStore(
+  {
+    // optional settings
+    createDatabaseTable: true
+  },
+  pool
+);
+
+
+//Middleware
 const app = express();
 
 app.use(express.json());
 
+app.use(express.json());
+
+app.use(session({
+  name: 'sb.sid',
+  secret: process.env.SS,
+  store: sessionStore,
+  resave: false,
+  saveUninitialized: false,
+  cookie: {
+    httpOnly: true,
+    secure: false, // change to true when using HTTPS
+    sameSite: 'lax',
+    maxAge: 1000 * 60 * 60 * 24 // 1 day
+  }
+}));
+
+function requireLogin(req, res, next) {
+  if (!req.session || !req.session.uid) {
+    return res.status(401).json({
+      success: false,
+      message: 'Unauthorized'
+    });
+  }
+
+  next();
+}
 
 app.use(express.static('public', {
   setHeaders: (res, filePath) => {
@@ -64,74 +105,106 @@ app.post('/api/createUser', async (req, res) => {
   }
 });
 
-// app.post ('/api/createUser', async (req,res) => {
-//   const {newUser} = req.body;
-//   const passHash = await bcrypt.hash(pass, 10);
-
-app.post('/api/loginUser',async (req, res) => {
+app.post('/api/loginUser', async (req, res) => {
   try {
-    const {pass, uname } = req.body;
-  console.log('ran login', uname);
-  
-  const [rows] = await pool.execute(
-    'SELECT username,password_hash FROM users WHERE username = ?', [uname]
-  );
+    const { uname, pass } = req.body;
 
-  console.log('found rows: ',rows.length);
-  if (rows.length === 0) {
-  console.log("User not found");
-  return res.status(404).json({message: "User not found"});
-  }
-  const user = rows[0];
-
-  console.log({
-  pass,
-  passType: typeof pass,
-  hash: user.password_hash,
-  hashType: typeof user.password_hash
-});
-
-// if (!pass || typeof pass !== 'string') {
-//   return res.status(400).json({ message: "Invalid password input" });
-// }
-
-// if (!user.password_hash || typeof user.password_hash !== 'string') {
-//   console.error('Invalid hash in DB:', user.password_hash);
-//   return res.status(500).json({ message: "Corrupted user data" });
-// }
-
-  const hash = user.password_hash.toString();
-
-  const isMatch = await bcrypt.compare(pass,hash);
-  if (isMatch) {
-      return res.json({ success: true, user: user.username });
-    } else {
-      return res.status(401).json({ success: false, message: "Invalid username or password" });
+    if (!uname || !pass) {
+      return res.status(400).json({
+        success: false,
+        message: 'Username and password required'
+      });
     }
 
-  } catch(err) {
-    console.error('LOGIN ERROR',err);
-    return res.status(500).json({ message: "Server error" });
-  }
-})
+    const [rows] = await pool.execute(
+      `SELECT user_id, username, password_hash
+       FROM users
+       WHERE username = ?`,
+      [uname]
+    );
 
+    if (rows.length === 0) {
+      return res.status(401).json({
+        success: false,
+        message: 'Invalid username or password'
+      });
+    }
 
-// })
-//serve main at root
-// app.get('/', (req, res) => {
-//   res.sendFile(path.join(__dirname, 'public', 'main.html'));
-// });
+    const user = rows[0];
 
+    const isMatch = await bcrypt.compare(
+      pass,
+      user.password_hash.toString()
+    );
 
+    if (!isMatch) {
+      return res.status(401).json({
+        success: false,
+        message: 'Invalid username or password'
+      });
+    }
 
-// Get all users
-app.get('/users', async (req, res) => {
-  try {
-    const [rows] = await pool.execute('SELECT * FROM users');
-    res.json(rows);
+    // regenerate session for security
+    req.session.regenerate(err => {
+      if (err) {
+        return res.status(500).json({
+          success: false,
+          message: 'Session error'
+        });
+      }
+
+      req.session.uid = user.user_id;
+
+      return res.json({
+        success: true,
+        message: 'Login successful',
+        user: user.username
+      });
+    });
+
   } catch (err) {
-    res.status(500).json({ error: err.message });
+    console.error('LOGIN ERROR:', err);
+
+    return res.status(500).json({
+      success: false,
+      message: 'Server error'
+    });
   }
+});
+
+app.get('/api/me', requireLogin, (req, res) => {
+  res.json({
+    success: true,
+    uid: req.session.uid,
+    username: req.session.username
+  });
+});
+
+app.get('/api/dashboard', requireLogin, (req, res) => {
+  res.json({
+    success: true,
+    message: `Welcome ${req.session.username}`
+  });
+});
+
+app.post('/api/logout', (req, res) => {
+  req.session.destroy(err => {
+    if (err) {
+      return res.status(500).json({
+        success: false,
+        message: 'Logout failed'
+      });
+    }
+
+    res.clearCookie('sb.sid');
+    await pool.execute (`DELETE FROM sessions WHERE session_id = ?`,
+      [req.session.uid]
+    ) 
+    return res.json({
+      success: true,
+      message: 'Logged out'
+    });
+  });
 });
 
 // Get user by id

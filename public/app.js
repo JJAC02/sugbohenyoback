@@ -1,311 +1,373 @@
-//Connecting to Node.js to create the user, passing values
-const form = document.getElementById('signup-form');
+// ========================================
+// AUTHENTICATION HANDLERS
+// ========================================
 
-if (form) {  // ✅ Only run if signup form exists
-  form.addEventListener("submit", async (e) => {
-    e.preventDefault();
-
-    if(form.pword.value === form.cpword.value){
-      console.log('Processing Creation of Account');
-      const email = form.emailad.value;
-      const pass = form.pword.value;
-      const fname = form.fname.value;
-      const lname = form.lname.value;
-      const uname = form.uname.value;
-      const points = 0;
-
-      console.log(email, pass, fname, lname, uname, points);
-      const res = await fetch('/api/createUser', {
-        method: 'POST',
-        headers: {"Content-Type" : "application/json"},
-        body: JSON.stringify({ email, pass, fname, lname, uname, points}) 
-      });
-
-      const data = await res.json();
-
-      if(data.goods === 1){
-        console.log('worked');
-      } else{
-        window.alert(data.error);
-      }
-    } else {
-      alert("Password Do Not Match");
-    }
-  });
-}
-
-  async function loadImage() {
-    const id = 1;
-  
-    fetch('/api/getImage/1/1')
-      .then(res => res.json())
-      .then(data => {
-        document.getElementById("testimage").src = data.image;
-      });
-
-    // const res = await fetch('api/getImage/1/1');
-    // console.log('working');
-    // const data = await res.json();
-
-    // document.getElementById("testimage").src = data.iamge;
-  }
-
-const lform = document.getElementById('login-form');
-
-if (lform) {  // ✅ Only run if login form exists
-  lform.addEventListener("submit", async (event) => {
-    event.preventDefault();
-
-    const uname = lform.uname.value;
-    const pass = lform.password.value;
-    
-    console.log('created uname, pass');
-    const res = await fetch('/api/loginUser', {
-      method: 'POST',
-      headers: {"Content-Type" : "application/json"},
-      body: JSON.stringify({ pass, uname })
-    });
-
-    const data = await res.json();
-
-    if(data.success){
-      console.log('login successful');
-      // Redirect to main page or dashboard
-      window.location.href = '/index';
-    } else {
-      window.alert(data.message);
-    }
-  });
-}
-
-// LOGIN HANDLER - Integrated with Node.js backend
-(function attachLoginHandler() {
-    const form = document.getElementById('login-form');
-    if (!form) return;
-
-    const freshForm = form.cloneNode(true);
-    form.parentNode.replaceChild(freshForm, form);
-
-    freshForm.addEventListener('submit', async function (e) {
-        e.preventDefault();
-
-        const usernameEl = document.getElementById('username');
-        const passwordEl = document.getElementById('password');
-
-        const username = usernameEl.value.trim();
-        const password = passwordEl.value;
-
-        if (!username || !password) {
-            showLoginError('Please fill in all fields.');
-            return;
-        }
-
-        try {
-            const res = await fetch('/api/loginUser', {
-                method: 'POST',
-                headers: {"Content-Type": "application/json"},
-                body: JSON.stringify({ uname: username, pass: password })
-            });
-
-            const data = await res.json();
-
-            if (data.success) {
-                console.log('Login successful');
-                window.location.href = '/index';
-            } else {
-                showLoginError(data.message || 'Invalid username or password', 'password');
-            }
-        } catch (error) {
-            console.error('Login error:', error);
-            showLoginError('Connection error. Please try again.');
-        }
-    });
-
-    function showLoginError(message, field) {
-        document.querySelectorAll('.auth-error-msg').forEach(el => el.remove());
-
-        const banner = document.createElement('p');
-        banner.className = 'auth-error-msg';
-        banner.textContent = '⚠ ' + message;
-        banner.style.cssText = `
-            color: #e05050;
-            font-size: 0.82rem;
-            margin-top: 0.5rem;
-            text-align: center;
-        `;
-
-        const anchor = field === 'password'
-            ? document.getElementById('password').closest('.input-box')
-            : field === 'username'
-                ? document.getElementById('username').closest('.input-box')
-                : document.querySelector('#login-form button[type="submit"]');
-
-        if (anchor) anchor.insertAdjacentElement('afterend', banner);
-    }
-})();
-
-
-// SIGNUP HANDLER - Integrated with Node.js backend
-(function attachSignupHandler() {
+/**
+ * Signup Form Handler
+ * Handles user registration with client-side validation
+ */
+(function initSignupForm() {
     const form = document.getElementById('signup-form');
     if (!form) return;
 
-    const freshForm = form.cloneNode(true);
-    form.parentNode.replaceChild(freshForm, form);
-
     // Real-time validation: clear errors on input
-    ['firstname','lastname','username','email','password','confirm-password'].forEach(id => {
-        const el = document.getElementById(id);
-        if (!el) return;
-        el.addEventListener('input', function () {
+    const inputFields = ['firstname', 'lastname', 'username', 'email', 'password', 'confirm-password'];
+    inputFields.forEach(id => {
+        const element = document.getElementById(id);
+        if (!element) return;
+        
+        element.addEventListener('input', function() {
             this.classList.remove('invalid');
-            const errId = 'err-' + (id === 'confirm-password' ? 'confirm' : id);
-            const errEl = document.getElementById(errId);
-            if (errEl) errEl.textContent = '';
+            const errorId = `err-${id === 'confirm-password' ? 'confirm' : id}`;
+            const errorElement = document.getElementById(errorId);
+            if (errorElement) errorElement.textContent = '';
         });
     });
 
     // Password strength meter
-    const pwEl = document.getElementById('password');
-    if (pwEl) {
-        pwEl.addEventListener('input', function () {
-            const val = this.value;
-            const wrap  = document.getElementById('strength-wrap');
-            const fill  = document.getElementById('strength-fill');
-            const label = document.getElementById('strength-label');
-            if (!wrap) return;
-
-            if (val.length === 0) { 
-                wrap.classList.remove('visible'); 
-                return; 
-            }
-
-            wrap.classList.add('visible');
-            fill.classList.remove('weak', 'medium', 'strong');
-
-            let score = 0;
-            if (val.length >= 8) score++;
-            if (/[A-Z]/.test(val)) score++;
-            if (/[0-9]/.test(val)) score++;
-            if (/[^A-Za-z0-9]/.test(val)) score++;
-
-            if (score <= 1) {
-                fill.classList.add('weak');
-                label.textContent = 'Weak';
-                label.style.color = '#e05050';
-            } else if (score <= 2) {
-                fill.classList.add('medium');
-                label.textContent = 'Medium';
-                label.style.color = '#e8a020';
-            } else {
-                fill.classList.add('strong');
-                label.textContent = 'Strong';
-                label.style.color = '#30c8b0';
-            }
-        });
-    }
+    initPasswordStrengthMeter();
 
     // Form submission
-    freshForm.addEventListener('submit', async function (e) {
-        e.preventDefault();
-
-        const get  = id => document.getElementById(id);
-        const setE = (id, errId, msg) => {
-            get(id).classList.add('invalid');
-            get(id).classList.remove('valid');
-            get(errId).textContent = msg;
-            valid = false;
-        };
-        const setV = (id, errId) => {
-            get(id).classList.remove('invalid');
-            get(id).classList.add('valid');
-            get(errId).textContent = '';
-        };
-
-        let valid = true;
-
-        const firstname = get('firstname').value.trim();
-        const lastname  = get('lastname').value.trim();
-        const username  = get('username').value.trim();
-        const email     = get('email').value.trim();
-        const password  = get('password').value;
-        const confirm   = get('confirm-password').value;
-
-        // Client-side validation
-        if (!firstname)     setE('firstname', 'err-firstname', 'First name is required.');
-        else                setV('firstname', 'err-firstname');
-
-        if (!lastname)      setE('lastname',  'err-lastname',  'Last name is required.');
-        else                setV('lastname',  'err-lastname');
-
-        if (username.length < 3) setE('username', 'err-username', 'Username must be at least 3 characters.');
-        else                     setV('username', 'err-username');
-
-        if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) setE('email', 'err-email', 'Please enter a valid email address.');
-        else                                             setV('email', 'err-email');
-
-        if (password.length < 8) setE('password', 'err-password', 'Password must be at least 8 characters.');
-        else                     setV('password', 'err-password');
-
-        if (confirm !== password) setE('confirm-password', 'err-confirm', 'Passwords do not match.');
-        else                      setV('confirm-password', 'err-confirm');
-
-        if (!valid) return;
-
-        // Submit to backend
-        try {
-            console.log('Processing creation of account');
-            const res = await fetch('/api/createUser', {
-                method: 'POST',
-                headers: {"Content-Type": "application/json"},
-                body: JSON.stringify({ 
-                    fname: firstname, 
-                    lname: lastname, 
-                    uname: username, 
-                    email: email,
-                    pass: password,
-                    points: 0
-                })
-            });
-
-            const data = await res.json();
-
-            if (data.goods === 1) {
-                console.log('Account created successfully');
-                window.location.href = '/index';
-            } else {
-                // Handle server-side validation errors
-                const errorMsg = data.error || 'An error occurred';
-                
-                if (errorMsg.toLowerCase().includes('username')) {
-                    setE('username', 'err-username', errorMsg);
-                } else if (errorMsg.toLowerCase().includes('email')) {
-                    setE('email', 'err-email', errorMsg);
-                } else {
-                    window.alert(errorMsg);
-                }
-            }
-        } catch (error) {
-            console.error('Signup error:', error);
-            window.alert('Connection error. Please try again.');
-        }
-    });
+    form.addEventListener('submit', handleSignupSubmit);
 })();
 
 
-// Image loader function (if needed)
-async function loadImage() {
-    const id = 1;
-  
-    fetch('/api/getImage/1/1')
-        .then(res => res.json())
-        .then(data => {
-            const imgEl = document.getElementById("testimage");
-            if (imgEl) {
-                imgEl.src = data.image;
-            }
-        })
-        .catch(error => {
-            console.error('Error loading image:', error);
+/**
+ * Login Form Handler
+ * Handles user authentication
+ */
+(function initLoginForm() {
+    const form = document.getElementById('login-form');
+    if (!form) return;
+
+    form.addEventListener('submit', handleLoginSubmit);
+})();
+
+
+// ========================================
+// SIGNUP FUNCTIONS
+// ========================================
+
+/**
+ * Initialize password strength meter
+ */
+function initPasswordStrengthMeter() {
+    const passwordInput = document.getElementById('password');
+    if (!passwordInput) return;
+
+    passwordInput.addEventListener('input', function() {
+        const password = this.value;
+        const strengthWrap = document.getElementById('strength-wrap');
+        const strengthFill = document.getElementById('strength-fill');
+        const strengthLabel = document.getElementById('strength-label');
+        
+        if (!strengthWrap) return;
+
+        // Hide meter if password is empty
+        if (password.length === 0) {
+            strengthWrap.classList.remove('visible');
+            return;
+        }
+
+        strengthWrap.classList.add('visible');
+        strengthFill.classList.remove('weak', 'medium', 'strong');
+
+        // Calculate password strength
+        let score = 0;
+        if (password.length >= 8) score++;
+        if (/[A-Z]/.test(password)) score++;
+        if (/[0-9]/.test(password)) score++;
+        if (/[^A-Za-z0-9]/.test(password)) score++;
+
+        // Update strength indicator
+        if (score <= 1) {
+            strengthFill.classList.add('weak');
+            strengthLabel.textContent = 'Weak';
+            strengthLabel.style.color = '#e05050';
+        } else if (score <= 2) {
+            strengthFill.classList.add('medium');
+            strengthLabel.textContent = 'Medium';
+            strengthLabel.style.color = '#e8a020';
+        } else {
+            strengthFill.classList.add('strong');
+            strengthLabel.textContent = 'Strong';
+            strengthLabel.style.color = '#30c8b0';
+        }
+    });
+}
+
+
+/**
+ * Handle signup form submission
+ */
+async function handleSignupSubmit(event) {
+    event.preventDefault();
+
+    const formData = getSignupFormData();
+    
+    // Validate form data
+    if (!validateSignupForm(formData)) {
+        return;
+    }
+
+    // Submit to backend
+    try {
+        console.log('Processing creation of account');
+        const response = await fetch('/api/createUser', {
+            method: 'POST',
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+                fname: formData.firstname,
+                lname: formData.lastname,
+                uname: formData.username,
+                email: formData.email,
+                pass: formData.password,
+                points: 0
+            })
         });
+
+        const data = await response.json();
+
+        if (data.goods === 1) {
+            console.log('Account created successfully');
+            window.location.href = '/index';
+        } else {
+            handleSignupError(data.error || 'An error occurred');
+        }
+    } catch (error) {
+        console.error('Signup error:', error);
+        window.alert('Connection error. Please try again.');
+    }
+}
+
+
+/**
+ * Get form data from signup form
+ */
+function getSignupFormData() {
+    const getElementById = id => document.getElementById(id);
+    
+    return {
+        firstname: getElementById('firstname').value.trim(),
+        lastname: getElementById('lastname').value.trim(),
+        username: getElementById('username').value.trim(),
+        email: getElementById('email').value.trim(),
+        password: getElementById('password').value,
+        confirm: getElementById('confirm-password').value
+    };
+}
+
+
+/**
+ * Validate signup form fields
+ */
+function validateSignupForm(formData) {
+    let isValid = true;
+
+    // First name validation
+    if (!formData.firstname) {
+        setFieldError('firstname', 'First name is required.');
+        isValid = false;
+    } else {
+        setFieldValid('firstname');
+    }
+
+    // Last name validation
+    if (!formData.lastname) {
+        setFieldError('lastname', 'Last name is required.');
+        isValid = false;
+    } else {
+        setFieldValid('lastname');
+    }
+
+    // Username validation
+    if (formData.username.length < 3) {
+        setFieldError('username', 'Username must be at least 3 characters.');
+        isValid = false;
+    } else {
+        setFieldValid('username');
+    }
+
+    // Email validation
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailRegex.test(formData.email)) {
+        setFieldError('email', 'Please enter a valid email address.');
+        isValid = false;
+    } else {
+        setFieldValid('email');
+    }
+
+    // Password validation
+    if (formData.password.length < 8) {
+        setFieldError('password', 'Password must be at least 8 characters.');
+        isValid = false;
+    } else {
+        setFieldValid('password');
+    }
+
+    // Confirm password validation
+    if (formData.confirm !== formData.password) {
+        setFieldError('confirm-password', 'Passwords do not match.', 'confirm');
+        isValid = false;
+    } else {
+        setFieldValid('confirm-password', 'confirm');
+    }
+
+    return isValid;
+}
+
+
+/**
+ * Set field error state
+ */
+function setFieldError(fieldId, message, errorSuffix = null) {
+    const field = document.getElementById(fieldId);
+    const errorId = `err-${errorSuffix || fieldId}`;
+    const errorElement = document.getElementById(errorId);
+    
+    if (field) {
+        field.classList.add('invalid');
+        field.classList.remove('valid');
+    }
+    
+    if (errorElement) {
+        errorElement.textContent = message;
+    }
+}
+
+
+/**
+ * Set field valid state
+ */
+function setFieldValid(fieldId, errorSuffix = null) {
+    const field = document.getElementById(fieldId);
+    const errorId = `err-${errorSuffix || fieldId}`;
+    const errorElement = document.getElementById(errorId);
+    
+    if (field) {
+        field.classList.remove('invalid');
+        field.classList.add('valid');
+    }
+    
+    if (errorElement) {
+        errorElement.textContent = '';
+    }
+}
+
+
+/**
+ * Handle signup error from server
+ */
+function handleSignupError(errorMessage) {
+    if (errorMessage.toLowerCase().includes('username')) {
+        setFieldError('username', errorMessage);
+    } else if (errorMessage.toLowerCase().includes('email')) {
+        setFieldError('email', errorMessage);
+    } else {
+        window.alert(errorMessage);
+    }
+}
+
+
+// ========================================
+// LOGIN FUNCTIONS
+// ========================================
+
+/**
+ * Handle login form submission
+ */
+async function handleLoginSubmit(event) {
+    event.preventDefault();
+
+    const usernameElement = document.getElementById('username');
+    const passwordElement = document.getElementById('password');
+
+    const username = usernameElement.value.trim();
+    const password = passwordElement.value;
+
+    // Basic validation
+    if (!username || !password) {
+        showLoginError('Please fill in all fields.');
+        return;
+    }
+
+    // Submit to backend
+    try {
+        const response = await fetch('/api/loginUser', {
+            method: 'POST',
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ uname: username, pass: password })
+        });
+
+        const data = await response.json();
+
+        if (data.success) {
+            console.log('Login successful');
+            window.location.href = '/index';
+        } else {
+            showLoginError(data.message || 'Invalid username or password', 'password');
+        }
+    } catch (error) {
+        console.error('Login error:', error);
+        showLoginError('Connection error. Please try again.');
+    }
+}
+
+
+/**
+ * Show login error message
+ */
+function showLoginError(message, field = null) {
+    // Remove existing error messages
+    document.querySelectorAll('.auth-error-msg').forEach(element => element.remove());
+
+    // Create error banner
+    const errorBanner = document.createElement('p');
+    errorBanner.className = 'auth-error-msg';
+    errorBanner.textContent = '⚠ ' + message;
+    errorBanner.style.cssText = `
+        color: #e05050;
+        font-size: 0.82rem;
+        margin-top: 0.5rem;
+        text-align: center;
+    `;
+
+    // Find anchor element for error placement
+    let anchor;
+    if (field === 'password') {
+        anchor = document.getElementById('password')?.closest('.input-box');
+    } else if (field === 'username') {
+        anchor = document.getElementById('username')?.closest('.input-box');
+    } else {
+        anchor = document.querySelector('#login-form button[type="submit"]');
+    }
+
+    // Insert error message
+    if (anchor) {
+        anchor.insertAdjacentElement('afterend', errorBanner);
+    }
+}
+
+
+// ========================================
+// UTILITY FUNCTIONS
+// ========================================
+
+/**
+ * Load image from API
+ * @param {number} param1 - First parameter for image API
+ * @param {number} param2 - Second parameter for image API
+ */
+async function loadImage(param1 = 1, param2 = 1) {
+    try {
+        const response = await fetch(`/api/getImage/${param1}/${param2}`);
+        const data = await response.json();
+        
+        const imageElement = document.getElementById("testimage");
+        if (imageElement && data.image) {
+            imageElement.src = data.image;
+        }
+    } catch (error) {
+        console.error('Error loading image:', error);
+    }
 }
