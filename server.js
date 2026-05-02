@@ -6,6 +6,7 @@ const MySQLStore = require('express-mysql-session')(session);
 const path = require('path');
 const bcrypt = require('bcrypt');
 const mysql = require('mysql2/promise');
+const Groq = require('groq-sdk');
 require('dotenv').config();
 
 const pool = mysql.createPool({
@@ -33,7 +34,9 @@ const sessionStore = new MySQLStore(
 //Middleware
 const app = express();
 
-app.use(express.json());
+const groq = new Groq({
+  apiKey: process.env.GROQ_API_KEY
+});
 
 app.use(express.json());
 
@@ -76,6 +79,37 @@ app.use(express.static('public', {
     }
   }
 }));
+
+//testing for API of AI
+app.post('/promptItinerary', async (req, res) => {
+  console.log("ran prompt");
+  
+  const userInput = req.body.message;
+
+  const response = await groq.chat.completions.create({
+    model: "llama-3.3-70b-versatile",
+    messages: [
+      {
+        role: "system",
+        content: "You are a travel advisor/planner."
+      },
+      {
+        role: "user",
+        content: userInput
+      }
+    ]
+  });
+
+  res.json({
+    reply: response.choices[0].message.content
+  })
+});
+
+app.get('/testing', (req, res) => {
+  res.sendFile(path.join(__dirname, 'public', 'testing.html'));
+});
+
+//end of AI test
 
 app.use('/phaser', express.static(path.join(__dirname, 'node_modules/phaser/dist')));
 
@@ -196,10 +230,8 @@ app.post('/api/logout', (req, res) => {
       });
     }
 
-    res.clearCookie('sb.sid');
-    await pool.execute (`DELETE FROM sessions WHERE session_id = ?`,
-      [req.session.uid]
-    ) 
+    res.clearCookie('sb.sid'); // or your custom cookie name
+
     return res.json({
       success: true,
       message: 'Logged out'
