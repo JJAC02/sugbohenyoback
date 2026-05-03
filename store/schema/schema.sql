@@ -8,7 +8,7 @@ CREATE TABLE users (
 	last_name     VARCHAR(255)   NOT NULL,
 	password_hash VARBINARY(255) NOT NULL,
 	deleted_at    DATETIME(6)    ,
-	profile_url   VARCHAR(25)    NULL,
+	profile_url   VARCHAR(255)    NULL,
 	user_points   INT            NULL,
 	description   TEXT
 
