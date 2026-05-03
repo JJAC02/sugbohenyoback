@@ -106,10 +106,23 @@ DEFAULT CHARSET=utf8mb4
 COLLATE=utf8mb4_unicode_ci;
 
 CREATE TABLE exploration (
-	explore_id   INT     PRIMARY KEY,
-	user_id      INT     NOT NULL,
+	explore_id   INT         PRIMARY KEY,
+	user_id      INT         NOT NULL,
 	
 	CONSTRAINT fk_explore_user
+    FOREIGN KEY(user_id) REFERENCES users(user_id)
+
+)ENGINE = InnoDB
+DEFAULT CHARSET=utf8mb4
+COLLATE=utf8mb4_unicode_ci;
+
+CREATE TABLE badges (
+	badge_id     INT          PRIMARY KEY,
+	user_id      INT          NOT NULL,
+	badge_name   VARCHAR(128) NOT NULL,
+	get_badge    TINYINT(1)   DEFAULT 0,
+	
+	CONSTRAINT fk_badge_user
     FOREIGN KEY(user_id) REFERENCES users(user_id)
 
 )ENGINE = InnoDB

@@ -130,7 +130,7 @@ async function handleSignupSubmit(event) {
 
         if (data.goods === 1) {
             console.log('Account created successfully');
-            window.location.href = '/index';
+            window.location.href = '/dashboard';
         } else {
             handleSignupError(data.error || 'An error occurred');
         }
@@ -303,7 +303,7 @@ async function handleLoginSubmit(event) {
 
         if (data.success) {
             console.log('Login successful');
-            window.location.href = '/index';
+            window.location.href = '/dashboard';
         } else {
             showLoginError(data.message || 'Invalid username or password', 'password');
         }

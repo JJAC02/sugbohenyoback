@@ -243,7 +243,7 @@ app.post('/api/logout', (req, res) => {
 app.get('/users/:id', async (req, res) => {
   try {
     const [rows] = await pool.execute(
-      'SELECT * FROM users WHERE id = ?',
+      'SELECT * FROM users WHERE user_id = ?',
       [req.params.id]
     );
     if (rows.length === 0) return res.status(404).json({ error: 'User not found' });
@@ -289,8 +289,8 @@ app.get('/login', (req, res) => {
   res.sendFile(path.join(__dirname, 'public', 'external-repo', 'login.html'));
 });
 
-app.get('/index', (req, res) => {
-  res.sendFile(path.join(__dirname, 'public', 'external-repo', 'index.html'));
+app.get('/dashboard', (req, res) => {
+  res.sendFile(path.join(__dirname, 'public', 'external-repo', 'dashboard.html'));
 });
 
 app.get('/streetview', (req, res) => {
