@@ -1,0 +1,106 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Badian Falls Jigsaw</title>
+    <style>
+        body { background: #1a1a1a; color: white; font-family: sans-serif; text-align: center; margin: 0; overflow: hidden; }
+        canvas { background: #333; border: 4px solid #00d2ff; cursor: grab; margin-top: 20px; box-shadow: 0 0 20px rgba(0,210,255,0.3); }
+        .ui { margin-top: 15px; }
+        button { padding: 10px 25px; cursor: pointer; background: #00d2ff; border: none; border-radius: 4px; font-weight: bold; color: #1a1a1a; transition: 0.2s; }
+        button:hover { background: #0099bb; }
+    </style>
+</head>
+<body>
+
+    <div class="ui">
+        <button onclick="shuffle()">Shuffle Puzzle</button>
+    </div>
+    <canvas id="puz"></canvas>
+
+<script>
+const cvs = document.getElementById('puz');
+const ctx = cvs.getContext('2d');
+
+const rows = 3, cols = 4, size = 160;
+cvs.width = cols * size;
+cvs.height = rows * size;
+
+let pieces = [], active = null, offset = { x: 0, y: 0 };
+
+const img = new Image();
+img.crossOrigin = "anonymous";
+img.src = 'https://images.unsplash.com/photo-1518509562904-e7ef99cdcc86?auto=format&fit=crop&w=640&h=480';
+
+img.onload = () => { shuffle(); loop(); };
+
+function shuffle() {
+    pieces = [];
+    for (let r = 0; r < rows; r++) {
+        for (let c = 0; c < cols; c++) {
+            pieces.push({
+                sx: c * size, sy: r * size,
+                x: Math.random() * (cvs.width - size),
+                y: Math.random() * (cvs.height - size),
+                cx: c * size, cy: r * size,
+                locked: false
+            });
+        }
+    }
+}
+
+function loop() {
+    ctx.clearRect(0, 0, cvs.width, cvs.height);
+    ctx.globalAlpha = 0.15;
+    ctx.drawImage(img, 0, 0, cvs.width, cvs.height);
+    ctx.globalAlpha = 1;
+
+    pieces.forEach(p => {
+        ctx.save();
+        ctx.beginPath();
+        ctx.rect(p.x, p.y, size, size);
+        ctx.clip();
+        ctx.drawImage(img, p.sx, p.sy, size, size, p.x, p.y, size, size);
+        ctx.strokeStyle = p.locked ? "#00ff00" : "#555";
+        ctx.strokeRect(p.x, p.y, size, size);
+        ctx.restore();
+    });
+    requestAnimationFrame(loop);
+}
+
+cvs.onmousedown = (e) => {
+    const r = cvs.getBoundingClientRect();
+    const x = e.clientX - r.left, y = e.clientY - r.top;
+    for (let i = pieces.length - 1; i >= 0; i--) {
+        let p = pieces[i];
+        if (!p.locked && x > p.x && x < p.x + size && y > p.y && y < p.y + size) {
+            active = p;
+            offset = { x: x - p.x, y: y - p.y };
+            pieces.splice(i, 1);
+            pieces.push(active);
+            break;
+        }
+    }
+};
+
+window.onmousemove = (e) => {
+    if (!active) return;
+    const r = cvs.getBoundingClientRect();
+    active.x = e.clientX - r.left - offset.x;
+    active.y = e.clientY - r.top - offset.y;
+};
+
+window.onmouseup = () => {
+    if (!active) return;
+    if (Math.abs(active.x - active.cx) < 25 && Math.abs(active.y - active.cy) < 25) {
+        active.x = active.cx;
+        active.y = active.cy;
+        active.locked = true;
+    }
+    active = null;
+    if (pieces.every(p => p.locked)) setTimeout(() => alert("Solved!"), 100);
+};
+</script>
+</body>
+</html>

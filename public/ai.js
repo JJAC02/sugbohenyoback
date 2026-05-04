@@ -13,13 +13,13 @@ async function createItinerary() {
                 "Content-Type": "application/json"
             },
             body: JSON.stringify({
-                message: `create a 1 to 3 days travel plan for ${place}`
+                message: `create a 1 to 3 days travel plan for ${place}, only the itinerary`
             })
         });
 
         const api = await res.json();
 
-        output.textContent = api.reply;
+        output.innerHTML = api.reply;
 
     } catch (err) {
         console.error("generate error",err);

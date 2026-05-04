@@ -91,7 +91,7 @@ app.post('/promptItinerary', async (req, res) => {
     messages: [
       {
         role: "system",
-        content: "You are a travel advisor/planner."
+        content: "You are a travel advisor/planner. create it using html tags"
       },
       {
         role: "user",
