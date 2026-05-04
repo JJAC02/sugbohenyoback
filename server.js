@@ -25,7 +25,9 @@ module.exports = pool;
 const sessionStore = new MySQLStore(
   {
     // optional settings
-    createDatabaseTable: true
+    createDatabaseTable: true,
+    checkExpirationInterval: 900000,
+    expiration: 86400000,
   },
   pool
 );
@@ -224,13 +226,16 @@ app.get('/api/dashboard', requireLogin, (req, res) => {
 app.post('/api/logout', (req, res) => {
   req.session.destroy(err => {
     if (err) {
+      console.error('Error destroying session:', err);
       return res.status(500).json({
         success: false,
         message: 'Logout failed'
       });
     }
+    
+    console.log('Session destroyed successfully.');
 
-    res.clearCookie('sb.sid'); // or your custom cookie name
+    res.clearCookie('sb.sid', {path: '/', domain: 'dcism.org'}); // or your custom cookie name
 
     return res.json({
       success: true,
@@ -278,33 +283,52 @@ app.get('/api/getImage/:id/:wid',async (req,res) => {
 });
 
 app.get('/', (req, res) => {
-  res.sendFile(path.join(__dirname, 'public', 'external-repo', 'landing.html'));
+  res.sendFile(path.join(__dirname, 'public', 'sugbohenyo', 'index.html'));
 });
 
 app.get('/signup', (req, res) => {
-  res.sendFile(path.join(__dirname, 'public', 'external-repo', 'signup.html'));
+  res.sendFile(path.join(__dirname, 'public', 'sugbohenyo', 'signup.html'));
 });
 
 app.get('/login', (req, res) => {
-  res.sendFile(path.join(__dirname, 'public', 'external-repo', 'login.html'));
+  res.sendFile(path.join(__dirname, 'public', 'sugbohenyo', 'login.html'));
 });
 
 app.get('/dashboard', (req, res) => {
-  res.sendFile(path.join(__dirname, 'public', 'external-repo', 'dashboard.html'));
+  res.sendFile(path.join(__dirname, 'public', 'sugbohenyo', 'dashboard.html'));
 });
 
 app.get('/streetview', (req, res) => {
-  res.sendFile(path.join(__dirname, 'public', 'external-repo', 'streetview.html'));
+  res.sendFile(path.join(__dirname, 'public', 'sugbohenyo', 'streetview.html'));
+});
+
+app.get('/map', (req, res) => {
+  res.sendFile(path.join(__dirname, 'public', 'sugbohenyo', 'map.html'));
+});
+
+app.get('/study', (req, res) => {
+  res.sendFile(path.join(__dirname, 'public', 'sugbohenyo', 'study.html'));
 });
 
 app.get('/adventure', (req, res) => {
-  res.sendFile(path.join(__dirname, 'public', 'external-repo', 'adventure.html'));
+  res.sendFile(path.join(__dirname, 'public', 'sugbohenyo', 'adventure.html'));
 });
 
 app.get('/ag1', (req, res) => {
-  res.sendFile(path.join(__dirname, 'public', 'external-repo', 'game', 'level1.html'));
+  res.sendFile(path.join(__dirname, 'public', 'sugbohenyo', 'game', 'level1.html'));
 });
 
+app.get('/games/bantayan', (req, res) => {
+  res.sendFile(path.join(__dirname, 'public', 'sugbohenyo', 'games', 'bantayan.html'));
+});
+
+app.get('/games/badian', (req, res) => {
+  res.sendFile(path.join(__dirname, 'public', 'sugbohenyo', 'games', 'badian.html'));
+});
+
+app.get('/games/oslob', (req, res) => {
+  res.sendFile(path.join(__dirname, 'public', 'sugbohenyo', 'games', 'oslob.html'));
+});
 
 //  Moved up
 // app.use((req, res, next) => {
