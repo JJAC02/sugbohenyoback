@@ -7,7 +7,6 @@ CREATE TABLE users (
 	first_name    VARCHAR(255)   NOT NULL,
 	last_name     VARCHAR(255)   NOT NULL,
 	password_hash VARBINARY(255) NOT NULL,
-	deleted_at    DATETIME(6)    ,
 	profile_url   VARCHAR(255)    NULL,
 	user_points   INT            NULL,
 	description   TEXT
@@ -83,9 +82,7 @@ COLLATE=utf8mb4_unicode_ci;
 
 CREATE TABLE locations (
     loc_id      INT          PRIMARY KEY AUTO_INCREMENT,
-    loc_name    VARCHAR(255) NOT NULL,
-    longitude   DOUBLE       NOT NULL,
-    latitude    DOUBLE       NOT NULL
+    loc_name    VARCHAR(255) NOT NULL
 
 )ENGINE = InnoDB
 DEFAULT CHARSET=utf8mb4
@@ -100,6 +97,7 @@ CREATE TABLE quiz_progress (
 	CONSTRAINT pk_user_quiz PRIMARY KEY(user_id, quiz_id),
 	FOREIGN KEY (user_id) REFERENCES users(user_id),
 	FOREIGN KEY (quiz_id) REFERENCES quiz(quiz_id)
+	ON DELETE CASCADE
 
 )ENGINE = InnoDB
 DEFAULT CHARSET=utf8mb4
@@ -111,6 +109,7 @@ CREATE TABLE exploration (
 	
 	CONSTRAINT fk_explore_user
     FOREIGN KEY(user_id) REFERENCES users(user_id)
+	ON DELETE CASCADE
 
 )ENGINE = InnoDB
 DEFAULT CHARSET=utf8mb4
@@ -124,6 +123,33 @@ CREATE TABLE badges (
 	
 	CONSTRAINT fk_badge_user
     FOREIGN KEY(user_id) REFERENCES users(user_id)
+	ON DELETE CASCADE
+
+)ENGINE = InnoDB
+DEFAULT CHARSET=utf8mb4
+COLLATE=utf8mb4_unicode_ci;
+
+CREATE TABLE session (
+	session_id    VARCHAR(255)  PRIMARY KEY,
+	user_id       INT           NOT NULL,
+	expires_at    DATETIME(6)   CURRENT_TIMESTAMP(6) * 60
+
+	CONSTRAINT fk_session_user
+    FOREIGN KEY(user_id) REFERENCES users(user_id)
+	ON DELETE CASCADE
+)ENGINE = InnoDB
+DEFAULT CHARSET=utf8mb4
+COLLATE=utf8mb4_unicode_ci;
+
+CREATE TABLE location_progress (
+	location_id     INT         NOT NULL,
+	user_id         INT         NOT NULL,
+	is_done         TINYINT(1)  DEFAULT 0
+
+	CONSTRAINT pk_user_locs PRIMARY KEY(user_id, loc_id),
+	FOREIGN KEY (user_id) REFERENCES users(user_id),
+	FOREIGN KEY (loc_id) REFERENCES locations(loc_id)
+	ON DELETE CASCADE
 
 )ENGINE = InnoDB
 DEFAULT CHARSET=utf8mb4
