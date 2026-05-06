@@ -1,6 +1,6 @@
 [submodule "public/external-repo"]
 	path = public/external-repo
-	url = https://github.com/liyajayme/sugbohenyo.git
+	url = git@github.com:liyajayme/sugbohenyo.git
 [submodule "public/sugbohenyo"]
 	path = public/sugbohenyo
-	url = https://github.com/liyajayme/sugbohenyo.git
+	url = git@github.com:liyajayme/sugbohenyo.git
