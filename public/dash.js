@@ -7,12 +7,12 @@ async function loadUser() {
     window.location.href = '/login';
     return;
   }
-  console.log(data);
+  //console.log(data);
 
   const response = await fetch(`/users/${data.uid}`);
   const user = await response.json();
 
-  console.log(user);
+  //console.log(user);
 
   const uname = document.getElementById("username");
   const xp = document.getElementById("dash-xp");
