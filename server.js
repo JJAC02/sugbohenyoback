@@ -336,5 +336,30 @@ app.get('/games/oslob', (req, res) => {
 //   next();
 // });
 
+//Dashboard api
+// app.get('api/dashboard_details/:uid', await (req,res) => {
+//   const uid = req.params.uid;
+//   try {
+//     const[user,stats,prog,badges,items] = await Promise.all([
+//       pool.execute(
+//         'SELECT username, user_points FROM users WHERE user_id = ?', [uid]
+//       ),
+//       pool.execute(
+//         'SELECT UNIQUE FROM users WHERE user_id = ?', [uid]
+//       ),
+//       pool.execute(
+//         'SELECT username, user_points FROM users WHERE user_id = ?', [uid]
+//       ),
+//       pool.execute(
+//         'SELECT username, user_points FROM users WHERE user_id = ?', [uid]
+//       ),
+//       pool.execute(
+//         'SELECT username, user_points FROM users WHERE user_id = ?', [uid]
+//       ),
+//     ])
+//   }
+
+// });
+
 const PORT = process.env.PORT || 8080;
 app.listen(PORT, () => console.log(`Server running on http://localhost:${PORT}`));
