@@ -7,12 +7,18 @@ async function loadUser() {
     window.location.href = '/login';
     return;
   }
-  //console.log(data);
 
-  const response = await fetch(`/users/${data.uid}`);
-  const user = await response.json();
+  const response = await fetch(`/api/dashboard_details/${data.uid}`);
+  const dash = await response.json();
 
-  //console.log(user);
+  // Check if the dashboard API call was successful
+  if(dash.success === false) {
+    console.error('Failed to load dashboard data');
+    return;
+  }
+
+  // Extract the data object from the response
+  const userData = dash.data;
 
   //PROFILE
   //Naming of Variables
@@ -24,11 +30,18 @@ async function loadUser() {
   const ld = document.getElementById("locations_done");
 
   //Actual showing of Data
-  uname.textContent = user.username;
-  xp.textContent = user.user_points + " XP";
-  pname.textContent = user.username;
+  uname.textContent = userData.username;
+  xp.textContent = userData.userPoints + " XP";
+  pname.textContent = userData.username;
+  
+  // Stats (completed counts)
+  qd.textContent = `${userData.stats.completedQuests} / ${userData.progress.totalQuests}`;
+  ob.textContent = `${userData.stats.completedBadges} / ${userData.progress.totalBadges}`;
+  ld.textContent = `${userData.stats.completedLocations} / ${userData.progress.totalLocations}`;
 
-  console.log("testing");
+  console.log("Dashboard loaded successfully");
+  console.log("Badges:", userData.badges);
+  console.log("Inventory:", userData.inventory);
 }
 
 loadUser();

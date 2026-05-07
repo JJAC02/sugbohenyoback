@@ -29,13 +29,13 @@ COLLATE=utf8mb4_unicode_ci;
 
 CREATE TABLE locations (
     loc_id      INT                  PRIMARY KEY AUTO_INCREMENT,
-	region_id   INT                  NOT NULL,
+	r_id        INT                  NOT NULL ,
     loc_name    VARCHAR(255)         NOT NULL,
 	longitude   DECIMAL(10,6)        ,
-	latitude    DECIMAL(10,6)        ,
+	latitude    DECIMAL(10,6)        
 
-	CONSTRAINT fk_loc_region
-	FOREIGN KEY (region_id) REFERENCES regions(region_id)
+	-- CONSTRAINT fk_loc_region
+	-- FOREIGN KEY (region_id) REFERENCES regions(region_id)
 
 )ENGINE = InnoDB
 DEFAULT CHARSET=utf8mb4
@@ -121,6 +121,21 @@ CREATE TABLE badge_progress (
 	
 	CONSTRAINT pk_badge_user PRIMARY KEY(badge_id,user_id),
 	FOREIGN KEY(badge_id) REFERENCES badges(badge_id),
+    FOREIGN KEY(user_id) REFERENCES users(user_id)
+	ON DELETE CASCADE
+
+)ENGINE = InnoDB
+DEFAULT CHARSET=utf8mb4
+COLLATE=utf8mb4_unicode_ci;
+
+
+
+CREATE TABLE user_inventory (
+	relic_id       INT          NOT NULL,
+	user_id        INT          NOT NULL,
+
+	CONSTRAINT pk_relic_user PRIMARY KEY(relic_id,user_id),
+	FOREIGN KEY(relic_id) REFERENCES relics(relic_id),
     FOREIGN KEY(user_id) REFERENCES users(user_id)
 	ON DELETE CASCADE
 

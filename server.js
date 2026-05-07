@@ -337,29 +337,83 @@ app.get('/games/oslob', (req, res) => {
 // });
 
 //Dashboard api
-// app.get('api/dashboard_details/:uid', await (req,res) => {
-//   const uid = req.params.uid;
-//   try {
-//     const[user,stats,prog,badges,items] = await Promise.all([
-//       pool.execute(
-//         'SELECT username, user_points FROM users WHERE user_id = ?', [uid]
-//       ),
-//       pool.execute(
-//         'SELECT UNIQUE FROM users WHERE user_id = ?', [uid]
-//       ),
-//       pool.execute(
-//         'SELECT username, user_points FROM users WHERE user_id = ?', [uid]
-//       ),
-//       pool.execute(
-//         'SELECT username, user_points FROM users WHERE user_id = ?', [uid]
-//       ),
-//       pool.execute(
-//         'SELECT username, user_points FROM users WHERE user_id = ?', [uid]
-//       ),
-//     ])
-//   }
+app.get('/api/dashboard_details/:uid', async (req, res) => {
+  const uid = req.params.uid;
+  try {
+    const [user, stats, prog, badges, items] = await Promise.all([
+      // Get user info
+      pool.execute(
+        'SELECT username, user_points FROM users WHERE user_id = ?',
+        [uid]
+      ),
+      // Get stats (completed counts)
+      Promise.all([
+        pool.execute(
+          'SELECT COUNT(DISTINCT quest_id) as count FROM quest_progress WHERE user_id = ?',
+          [uid]
+        ),
+        pool.execute(
+          'SELECT COUNT(DISTINCT loc_id) as count FROM location_progress WHERE user_id = ?',
+          [uid]
+        ),
+        pool.execute(
+          'SELECT COUNT(DISTINCT badge_id) as count FROM badge_progress WHERE user_id = ?',
+          [uid]
+        )
+      ]),
+      // Get progress (total counts)
+      Promise.all([
+        pool.execute('SELECT COUNT(quest_id) as count FROM quests'),
+        pool.execute('SELECT COUNT(loc_id) as count FROM locations'),
+        pool.execute('SELECT COUNT(badge_id) as count FROM badges')
+      ]),
+      // Get badges
+      pool.execute(
+        'SELECT * FROM badge_progress WHERE user_id = ?',
+        [uid]
+      ),
+      // Get items
+      pool.execute(
+        'SELECT * FROM user_inventory WHERE user_id = ?',
+        [uid]
+      )
+    ]);
 
-// });
+    // Extract rows from results (pool.execute returns [rows, fields])
+    const userData = user[0][0]; // First row
+    const statsData = {
+      completedQuests: stats[0][0][0].count,
+      completedLocations: stats[1][0][0].count,
+      completedBadges: stats[2][0][0].count
+    };
+    const progData = {
+      totalQuests: prog[0][0][0].count,
+      totalLocations: prog[1][0][0].count,
+      totalBadges: prog[2][0][0].count
+    };
+    const badgesData = badges[0];
+    const itemsData = items[0];
+
+    res.json({
+      success: true,
+      data: {
+        username: userData.username,
+        userPoints: userData.user_points,
+        stats: statsData,
+        progress: progData,
+        badges: badgesData,
+        inventory: itemsData
+      }
+    });
+
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({
+      success: false,
+      message: 'Server Error'
+    });
+  }
+});
 
 const PORT = process.env.PORT || 8080;
 app.listen(PORT, () => console.log(`Server running on http://localhost:${PORT}`));
