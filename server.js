@@ -330,6 +330,10 @@ app.get('/games/oslob', (req, res) => {
   res.sendFile(path.join(__dirname, 'public', 'sugbohenyo', 'games', 'oslob.html'));
 });
 
+// app.get('/favicon.ico', (req, res) => {
+//   res.sendFile(path.join(__dirname, 'public', 'favicon.ico'));
+// });
+
 //  Moved up
 // app.use((req, res, next) => {
 //   console.log(req.method, req.url);
