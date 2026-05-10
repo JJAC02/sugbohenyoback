@@ -244,15 +244,25 @@ app.post('/api/logout', (req, res) => {
   });
 });
 
-// Get user by id
-app.get('/users/:id', async (req, res) => {
+//Storing of User Points
+app.post('/api/storePoints/:id/:score', async (req, res) => {
+  const userId = req.params.id;
+  const score = parseInt(req.params.score, 10);
+  
   try {
+    console.log(userId, score);
     const [rows] = await pool.execute(
-      'SELECT * FROM users WHERE user_id = ?',
-      [req.params.id]
+      'UPDATE users SET user_points = user_points + ? WHERE user_id = ?',
+      [score, userId]  // Fixed: was "req,params.score" and order was wrong
     );
-    if (rows.length === 0) return res.status(404).json({ error: 'User not found' });
-    res.json(rows[0]);
+    
+    // Fixed: UPDATE returns affectedRows, not rows with data
+    if (rows.affectedRows === 0) {
+      console.log("not found");
+      return res.status(404).json({ error: 'User not found' });
+    }
+    console.log("saving error");
+    res.json({ success: true, message: 'Points updated' });
   } catch (err) {
     res.status(500).json({ error: err.message });
   }
@@ -315,7 +325,7 @@ app.get('/adventure', (req, res) => {
 });
 
 app.get('/ag1', (req, res) => {
-  res.sendFile(path.join(__dirname, 'public', 'sugbohenyo', 'game', 'level1.html'));
+  res.sendFile(path.join(__dirname, 'public', 'sugbohenyo', 'games', 'level1.html'));
 });
 
 app.get('/games/bantayan', (req, res) => {
