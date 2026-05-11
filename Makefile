@@ -34,4 +34,8 @@ deploy:
 		"$(SSH_USER)@$(SSH_HOST)" \
 		"pm2 restart all && pm2 save"
 
-.PHONY: migrate database database_dev clean deploy
+connect:
+	 @sshpass -p "$(SSH_PASSWORD)" ssh -p $(SSH_PORT) \
+                "$(SSH_USER)@$(SSH_HOST)"
+
+.PHONY: migrate database database_dev clean deploy connect
