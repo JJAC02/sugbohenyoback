@@ -29,13 +29,12 @@ COLLATE=utf8mb4_unicode_ci;
 
 CREATE TABLE locations (
     loc_id      INT                  PRIMARY KEY AUTO_INCREMENT,
-	r_id        INT                  NOT NULL ,
     loc_name    VARCHAR(255)         NOT NULL,
 	longitude   DECIMAL(10,6)        ,
-	latitude    DECIMAL(10,6)        
+	latitude    DECIMAL(10,6)        ,
 
-	-- CONSTRAINT fk_loc_region
-	-- FOREIGN KEY (region_id) REFERENCES regions(region_id)
+	CONSTRAINT fk_loc_region
+	FOREIGN KEY (region_id) REFERENCES regions(region_id)
 
 )ENGINE = InnoDB
 DEFAULT CHARSET=utf8mb4
@@ -47,10 +46,10 @@ CREATE TABLE quests (
 	quest_id      INT                PRIMARY KEY AUTO_INCREMENT,
 	quest_name    VARCHAR(255)       NOT NULL,
 	is_complete   TINYINT(1)         DEFAULT 0,
-	loc_id        INT                NOT NULL,
+	region_id     INT                NOT NULL,
 
 	CONSTRAINT fk_quest_loc
-	FOREIGN KEY (loc_id) REFERENCES locations(loc_id)
+	FOREIGN KEY (region_id) REFERENCES regions(region_id)
 
 )ENGINE = InnoDB
 DEFAULT CHARSET=utf8mb4
@@ -138,6 +137,22 @@ CREATE TABLE user_inventory (
 	FOREIGN KEY(relic_id) REFERENCES relics(relic_id),
     FOREIGN KEY(user_id) REFERENCES users(user_id)
 	ON DELETE CASCADE
+
+)ENGINE = InnoDB
+DEFAULT CHARSET=utf8mb4
+COLLATE=utf8mb4_unicode_ci;
+
+
+
+CREATE TABLE user_itineraries (
+	itinerary_id    INT           NOT NULL,
+	user_id         INT           NOT NULL,
+	item            MEDIUMTEXT    NOT NULL,
+
+	CONSTRAINT fk_user_itinerary
+	FOREIGN KEY(user_id) REFERENCES users(user_id)
+	ON DELETE CASCADE
+	
 
 )ENGINE = InnoDB
 DEFAULT CHARSET=utf8mb4
