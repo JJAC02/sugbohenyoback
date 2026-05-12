@@ -31,10 +31,7 @@ CREATE TABLE locations (
     loc_id      INT                  PRIMARY KEY AUTO_INCREMENT,
     loc_name    VARCHAR(255)         NOT NULL,
 	longitude   DECIMAL(10,6)        ,
-	latitude    DECIMAL(10,6)        ,
-
-	CONSTRAINT fk_loc_region
-	FOREIGN KEY (region_id) REFERENCES regions(region_id)
+	latitude    DECIMAL(10,6)        
 
 )ENGINE = InnoDB
 DEFAULT CHARSET=utf8mb4
@@ -45,10 +42,9 @@ COLLATE=utf8mb4_unicode_ci;
 CREATE TABLE quests (
 	quest_id      INT                PRIMARY KEY AUTO_INCREMENT,
 	quest_name    VARCHAR(255)       NOT NULL,
-	is_complete   TINYINT(1)         DEFAULT 0,
 	region_id     INT                NOT NULL,
 
-	CONSTRAINT fk_quest_loc
+	CONSTRAINT fk_quest_region
 	FOREIGN KEY (region_id) REFERENCES regions(region_id)
 
 )ENGINE = InnoDB

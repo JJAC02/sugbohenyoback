@@ -267,6 +267,34 @@ app.post('/api/storePoints/:id/:score', async (req, res) => {
     res.status(500).json({ error: err.message });
   }
 });
+//relic related apis
+app.get('/api/getRelic/:uid',async (req,res) => {
+  try {
+    const[rows] = await pool.execute(
+    'SELECT * FROM user_inventory WHERE user_id = ?', [req.params.uid]
+    );
+    console.log("getting relic");
+    return res.json({sucess: true, message: "relics taken", data: rows});
+  } catch(err){
+    console.error(err);
+    res.status(500).json({ message: "Server error"});
+  }
+});
+
+app.post('api/obtainRelic/:uid/:rid', async(req,res) => {
+  try {
+    const[rows] = await pool.execute(
+    'INSERT INTO user_inventory (relic_id, user_id) VALUES ? ?', [req.params.rid,req.params.uid]
+    );
+    console.log('stored relic');
+    return res.json({sucess: true, message: "relic stored"});
+  } catch(err){
+    console.error(err);
+    res.status(500).json({ message: "Server error"});
+  }
+});
+//relics end here
+
 
 
 app.get('/api/getImage/:id/:wid',async (req,res) => {

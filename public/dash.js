@@ -1,3 +1,5 @@
+// const { query } = require("../server");
+
 async function loadUser() {
   const res = await fetch('/api/me', {
     credentials: 'include'
@@ -28,6 +30,9 @@ async function loadUser() {
   const qd = document.getElementById("quest_done");
   const ob = document.getElementById("obtained_badges");
   const ld = document.getElementById("locations_done");
+  const tq = document.getElementById("total_quests");
+  const subs = document.querySelectorAll(".progress-sub");
+  const bars = document.querySelectorAll(".progress-bar");
 
   //Actual showing of Data
   uname.textContent = userData.username;
@@ -35,9 +40,37 @@ async function loadUser() {
   pname.textContent = userData.username;
   
   // Stats (completed counts)
-  qd.textContent = `${userData.stats.completedQuests} / ${userData.progress.totalQuests}`;
-  ob.textContent = `${userData.stats.completedBadges} / ${userData.progress.totalBadges}`;
-  ld.textContent = `${userData.stats.completedLocations} / ${userData.progress.totalLocations}`;
+  qd.textContent = `${userData.stats.completedQuests}`;
+  ob.textContent = `${userData.stats.completedBadges}`;
+  ld.textContent = `${userData.stats.completedLocations}`;
+
+  //Progress bars
+  bars.forEach((bar, index) => {
+  const stat = [
+    userData.stats.completedQuests,
+    userData.stats.completedBadges,
+    userData.stats.completedLocations
+  ];
+
+  const total = [
+    userData.progress.totalQuests,
+    userData.progress.totalBadges,
+    userData.progress.totalLocations
+  ];
+
+  const dataper = [
+    document.getElementById("qpc"),
+    document.getElementById("bpc"),
+    document.getElementById("lpc")
+  ];
+
+
+  let per = (stat[index] / total[index]) * 100;
+
+  console.log(per);
+  dataper[index].textContent = `${per}%`;
+  bar.style.setProperty("--pct", `${per}%`);
+});
 
   console.log("Dashboard loaded successfully");
   console.log("Badges:", userData.badges);
@@ -45,3 +78,10 @@ async function loadUser() {
 }
 
 loadUser();
+
+/*
+${userData.progress.totalQuests}
+${userData.progress.totalBadges}
+${userData.progress.totalLocations}
+
+*/
