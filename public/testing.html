@@ -9,6 +9,7 @@
 <body>
     <h1 id="place">Badian</h1> 
     <p>Lores Ipsum</p>
+
     <div style="width: 100%; max-width: 800px; margin: auto;">
     <iframe 
         src="jigsaw.html" 
@@ -21,7 +22,23 @@
     <button id="btn"">Testing to create prompt</button>
 
     <div id="prompt"></div>
-
+    
+    <script>
+        let uid = 1;
+        let bid = 1;
+        async function obtainedBadge(){
+            try {
+                const res = await fetch(`/api/obtainBadge/${uid}/${bid}`,{
+                    method: 'POST'
+                });
+                const data = await res.json();
+                console.log(data);
+            } catch(error) {
+                console.log(error);
+            }
+        }
+        obtainedBadge();
+    </script>
     <script src="/sugbohenyo/widget.js"></script>
     <script src="/ai.js"></script>
 </body>

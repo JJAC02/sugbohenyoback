@@ -281,7 +281,7 @@ app.get('/api/getRelic/:uid',async (req,res) => {
   }
 });
 
-app.post('api/obtainRelic/:uid/:rid', async(req,res) => {
+app.post('/api/obtainRelic/:uid/:rid', async(req,res) => {
   try {
     const[rows] = await pool.execute(
     'INSERT INTO user_inventory (relic_id, user_id) VALUES ? ?', [req.params.rid,req.params.uid]
@@ -294,6 +294,22 @@ app.post('api/obtainRelic/:uid/:rid', async(req,res) => {
   }
 });
 //relics end here
+//badges start here
+app.post('/api/obtainBadge/:uid/:bid', async(req,res) => {
+  try {
+    console.log("im here");
+    const[rows] = await pool.execute(
+      'INSERT INTO badge_progress (badge_id, user_id) VALUES (?,?)', [req.params.bid,req.params.uid]
+    );
+    console.log("now here");
+    res.json({success:true, rows});
+    
+  } catch(err){
+    console.log("whoops");
+    console.error(err);
+    res.status(500).json({ message: "Server error"});
+  }
+});
 
 
 
