@@ -311,6 +311,22 @@ app.post('/api/obtainBadge/:uid/:bid', async(req,res) => {
   }
 });
 
+//quest
+app.post('/api/questComplete/:uid/:bid', async(req,res) => {
+  try {
+    console.log("im here");
+    const[rows] = await pool.execute(
+      'INSERT INTO badge_progress (badge_id, user_id) VALUES (?,?)', [req.params.bid,req.params.uid]
+    );
+    console.log("now here");
+    res.json({success:true, rows});
+    
+  } catch(err){
+    console.log("whoops");
+    console.error(err);
+    res.status(500).json({ message: "Server error"});
+  }
+});
 
 
 app.get('/api/getImage/:id/:wid',async (req,res) => {
@@ -384,6 +400,33 @@ app.get('/games/oslob', (req, res) => {
   res.sendFile(path.join(__dirname, 'public', 'sugbohenyo', 'games', 'oslob.html'));
 });
 
+app.get('/games/moalboal', (req, res) => {
+  res.sendFile(path.join(__dirname, 'public', 'sugbohenyo', 'games', 'moalboal.html'));
+});
+
+app.get('/games/cebucity', (req, res) => {
+  res.sendFile(path.join(__dirname, 'public', 'sugbohenyo', 'games', 'cebucity.html'));
+});
+
+app.get('/games/carcar', (req, res) => {
+  res.sendFile(path.join(__dirname, 'public', 'sugbohenyo', 'games', 'carcar.html'));
+});
+
+app.get('/games/talisay', (req, res) => {
+  res.sendFile(path.join(__dirname, 'public', 'sugbohenyo', 'games', 'talisay.html'));
+});
+
+app.get('/games/mactan', (req, res) => {
+  res.sendFile(path.join(__dirname, 'public', 'sugbohenyo', 'games', 'level2.html'));
+});
+
+app.get('/games/medellin', (req, res) => {
+  res.sendFile(path.join(__dirname, 'public', 'sugbohenyo', 'games', 'medellin.html'));
+});
+
+app.get('/games/danao', (req, res) => {
+  res.sendFile(path.join(__dirname, 'public', 'sugbohenyo', 'games', 'danao.html'));
+});
 // app.get('/favicon.ico', (req, res) => {
 //   res.sendFile(path.join(__dirname, 'public', 'favicon.ico'));
 // });
