@@ -416,9 +416,9 @@ app.get('/games/talisay', (req, res) => {
   res.sendFile(path.join(__dirname, 'public', 'sugbohenyo', 'games', 'talisay.html'));
 });
 
-app.get('/games/mactan', (req, res) => {
+app.get('/games/battleofmactan', (req, res) => {  
   res.sendFile(path.join(__dirname, 'public', 'sugbohenyo', 'games', 'level2.html'));
-});
+}); 
 
 app.get('/games/medellin', (req, res) => {
   res.sendFile(path.join(__dirname, 'public', 'sugbohenyo', 'games', 'medellin.html'));
