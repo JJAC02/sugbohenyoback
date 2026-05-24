@@ -17,6 +17,17 @@ CREATE TABLE users (
 
 
 
+CREATE TABLE ranks (
+	rank_id      INT                 PRIMARY KEY AUTO_INCREMENT,
+	rank_name    VARCHAR(50)         NOT NULL,
+	point_req    INT                 NOT NULL
+
+)ENGINE = InnoDB
+DEFAULT CHARSET=utf8mb4
+COLLATE=utf8mb4_unicode_ci;
+
+
+
   CREATE TABLE regions (
 	region_id    INT                 PRIMARY KEY AUTO_INCREMENT,
 	region_name  VARCHAR(50)         NOT NULL
