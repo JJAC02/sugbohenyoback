@@ -29,7 +29,7 @@ pool.getConnection()
     console.error('✗ Database connection failed:', err.message);
   });
 
-module.exports = pool;
+// module.exports = pool;
 
 //Session Store
 const sessionStore = new MySQLStore(
@@ -217,21 +217,59 @@ app.use((req, res, next) => {
 
 //Telling the database to create the user
 app.post('/api/createUser', async (req, res) => {
-  const {email, pass, fname, lname, uname, points } = req.body;
-  console.log('ran create');
-  const passHash = await bcrypt.hash(pass, 10);
-  try{
-    const [rows] = await pool.execute(
-      `INSERT INTO users (email, first_name, last_name, username, password_hash,user_points) VALUES (?, ?, ?, ?, ?, ?)`,
-      [email, fname, lname, uname, passHash, points]
+  try {
+    const { email, pass, fname, lname, uname } = req.body;
+
+    console.log('Creating user account');
+    const passHash = await bcrypt.hash(pass, 10);
+ 
+    const [result] = await pool.execute(
+      `INSERT INTO users (email, first_name, last_name, username, password_hash, user_points) 
+       VALUES (?, ?, ?, ?, ?, ?)`,
+      [email, fname, lname, uname, passHash, 0]
     );
-    console.log('success'
-    );
-    return res.json({goods: 1});
-  } catch (err){
-    console.log(err);
-    return res.json({error: err.message, goods: 0});
-  } finally{
+ 
+    console.log('User created successfully:', result.insertId);
+    
+    //auto-login
+    req.session.regenerate(err => {
+      if (err) {
+        console.error('Session regeneration error:', err);
+        return res.json({
+          success: true,
+          message: 'Account created successfully',
+          goods: 1
+        });
+      }
+ 
+      req.session.uid = result.insertId;
+      req.session.username = uname;
+ 
+      return res.json({
+        success: true,
+        message: 'Account created successfully',
+        goods: 1,
+        userId: result.insertId
+      });
+    });
+  } catch (err) {
+    console.error('Create user error:', err);
+ 
+    // Handle duplicate entry errors
+    if (err.code === 'ER_DUP_ENTRY') {
+      const field = err.message.includes('email') ? 'email' : 'username';
+      return res.status(409).json({
+        success: false,
+        message: `This ${field} is already taken`,
+        goods: 0
+      });
+    }
+ 
+    return res.status(500).json({
+      success: false,
+      message: 'Server error during registration',
+      goods: 0
+    });
 
   }
 });
@@ -278,14 +316,18 @@ app.post('/api/loginUser', async (req, res) => {
     // regenerate session for security
     req.session.regenerate(err => {
       if (err) {
+        console.error('Session regeneration error:', err);
         return res.status(500).json({
           success: false,
           message: 'Session error'
         });
       }
-
+ 
       req.session.uid = user.user_id;
-
+      req.session.username = user.username;
+ 
+      console.log('Login successful for user:', user.username);
+ 
       return res.json({
         success: true,
         message: 'Login successful',
@@ -294,11 +336,10 @@ app.post('/api/loginUser', async (req, res) => {
     });
 
   } catch (err) {
-    console.error('LOGIN ERROR:', err);
-
+    console.error('Login error:', err);
     return res.status(500).json({
       success: false,
-      message: 'Server error'
+      message: 'Server error during login'
     });
   }
 });
@@ -319,6 +360,8 @@ app.get('/api/dashboard', requireLogin, (req, res) => {
 });
 
 app.post('/api/logout', (req, res) => {
+  const username = req.session.username;
+  
   req.session.destroy(err => {
     if (err) {
       console.error('Error destroying session:', err);
@@ -328,288 +371,577 @@ app.post('/api/logout', (req, res) => {
       });
     }
     
-    console.log('Session destroyed successfully.');
-
-    res.clearCookie('sb.sid', {path: '/', domain: 'dcism.org'}); // or your custom cookie name
-
+    console.log('Session destroyed for user:', username);
+ 
+    res.clearCookie('sb.sid', { 
+      path: '/',
+      domain: 'dcism.org'
+    });
+ 
     return res.json({
       success: true,
-      message: 'Logged out'
+      message: 'Logged out successfully'
     });
   });
 });
 
 //Storing of User Points
-app.post('/api/storePoints/:id/:score', async (req, res) => {
-  const userId = req.params.id;
-  const score = parseInt(req.params.score, 10);
-  
+app.post('/api/storePoints/:id/:score', requireLogin, async (req, res) => {
   try {
-    console.log(userId, score);
-    const [rows] = await pool.execute(
-      'UPDATE users SET user_points = user_points + ? WHERE user_id = ?',
-      [score, userId]  // Fixed: was "req,params.score" and order was wrong
-    );
-    
-    // Fixed: UPDATE returns affectedRows, not rows with data
-    if (rows.affectedRows === 0) {
-      console.log("not found");
-      return res.status(404).json({ error: 'User not found' });
+    const userId = parseInt(req.params.id, 10);
+    const score = parseInt(req.params.score, 10);
+ 
+    // Verify user is updating their own points
+    if (req.session.uid !== userId) {
+      return res.status(403).json({
+        success: false,
+        message: 'Forbidden: Cannot update another user\'s points'
+      });
     }
-    console.log("save success");
-    res.json({ success: true, message: 'Points updated' });
-  } catch (err) {
-    res.status(500).json({ error: err.message });
-  }
-});
-//relic related apis
-app.get('/api/getRelic/:uid',async (req,res) => {
-  try {
-    const[rows] = await pool.execute(
-    'SELECT * FROM user_inventory WHERE user_id = ?', [req.params.uid]
+ 
+    // Validate score
+    if (!validateScore(score)) {
+      return res.status(400).json({
+        success: false,
+        message: 'Invalid score value'
+      });
+    }
+ 
+    const [result] = await pool.execute(
+      'UPDATE users SET user_points = user_points + ? WHERE user_id = ?',
+      [score, userId]
     );
-    console.log("getting relic");
-    return res.json({sucess: true, message: "relics taken", data: rows});
-  } catch(err){
-    console.error(err);
-    res.status(500).json({ message: "Server error"});
+ 
+    if (result.affectedRows === 0) {
+      return res.status(404).json({
+        success: false,
+        message: 'User not found'
+      });
+    }
+ 
+    console.log(`Points updated for user ${userId}: +${score}`);
+ 
+    res.json({
+      success: true,
+      message: 'Points updated successfully',
+      pointsAdded: score
+    });
+ 
+  } catch (err) {
+    console.error('Store points error:', err);
+    res.status(500).json({
+      success: false,
+      message: 'Server error'
+    });
   }
 });
 
-app.post('/api/obtainRelic/:uid/:rid', async(req,res) => {
+
+//relic related apis
+app.get('/api/getRelic/:uid', requireLogin, async (req, res) => {
   try {
-    const[rows] = await pool.execute(
-    'INSERT INTO user_inventory (relic_id, user_id) VALUES (?,?)', [req.params.rid,req.params.uid]
+    const userId = parseInt(req.params.uid, 10);
+ 
+    const [rows] = await pool.execute(
+      `SELECT ui.relic_id, ui.user_id, r.relic_name, r.region_id 
+       FROM user_inventory ui
+       JOIN relics r ON ui.relic_id = r.relic_id
+       WHERE ui.user_id = ?`,
+      [userId]
     );
-    console.log('stored relic');
-    return res.json({sucess: true, message: "relic stored"});
-  } catch(err){
-    console.error(err);
-    res.status(500).json({ message: "Server error"});
+ 
+    console.log(`Retrieved ${rows.length} relics for user ${userId}`);
+ 
+    res.json({
+      success: true,
+      message: 'Relics retrieved successfully',
+      data: rows
+    });
+ 
+  } catch (err) {
+    console.error('Get relic error:', err);
+    res.status(500).json({
+      success: false,
+      message: 'Server error'
+    });
+  }
+});
+ 
+app.post('/api/obtainRelic/:uid/:rid', requireLogin, async (req, res) => {
+  try {
+    const userId = parseInt(req.params.uid, 10);
+    const relicId = parseInt(req.params.rid, 10);
+ 
+    // Verify user is adding to their own inventory
+    if (req.session.uid !== userId) {
+      return res.status(403).json({
+        success: false,
+        message: 'Forbidden'
+      });
+    }
+ 
+    // Check if relic exists
+    const [relicCheck] = await pool.execute(
+      'SELECT relic_id FROM relics WHERE relic_id = ?',
+      [relicId]
+    );
+ 
+    if (relicCheck.length === 0) {
+      return res.status(404).json({
+        success: false,
+        message: 'Relic not found'
+      });
+    }
+ 
+    // Insert relic (will fail if duplicate due to PRIMARY KEY constraint)
+    const [result] = await pool.execute(
+      'INSERT INTO user_inventory (relic_id, user_id) VALUES (?, ?)',
+      [relicId, userId]
+    );
+ 
+    console.log(`Relic ${relicId} obtained by user ${userId}`);
+ 
+    res.json({
+      success: true,
+      message: 'Relic obtained successfully'
+    });
+ 
+  } catch (err) {
+    console.error('Obtain relic error:', err);
+ 
+    if (err.code === 'ER_DUP_ENTRY') {
+      return res.status(409).json({
+        success: false,
+        message: 'You already have this relic'
+      });
+    }
+ 
+    res.status(500).json({
+      success: false,
+      message: 'Server error'
+    });
   }
 });
 //relics end here
+
+
 //badges start here
-app.post('/api/obtainBadge/:uid/:bid', async(req,res) => {
+app.post('/api/obtainBadge/:uid/:bid', requireLogin, async (req, res) => {
   try {
-    console.log("im here");
-    const[rows] = await pool.execute(
-      'INSERT INTO badge_progress (badge_id, user_id) VALUES (?,?)', [req.params.bid,req.params.uid]
+    const userId = parseInt(req.params.uid, 10);
+    const badgeId = parseInt(req.params.bid, 10);
+ 
+    // Verify user is adding to their own badges
+    if (req.session.uid !== userId) {
+      return res.status(403).json({
+        success: false,
+        message: 'Forbidden'
+      });
+    }
+ 
+    // Check if badge exists
+    const [badgeCheck] = await pool.execute(
+      'SELECT badge_id FROM badges WHERE badge_id = ?',
+      [badgeId]
     );
-    console.log("now here");
-    res.json({success:true, rows});
-    
-  } catch(err){
-    console.log("whoops");
-    console.error(err);
-    res.status(500).json({ message: "Server error"});
+ 
+    if (badgeCheck.length === 0) {
+      return res.status(404).json({
+        success: false,
+        message: 'Badge not found'
+      });
+    }
+ 
+    // Insert badge
+    const [result] = await pool.execute(
+      'INSERT INTO badge_progress (badge_id, user_id) VALUES (?, ?)',
+      [badgeId, userId]
+    );
+ 
+    console.log(`Badge ${badgeId} obtained by user ${userId}`);
+ 
+    res.json({
+      success: true,
+      message: 'Badge obtained successfully'
+    });
+ 
+  } catch (err) {
+    console.error('Obtain badge error:', err);
+ 
+    if (err.code === 'ER_DUP_ENTRY') {
+      return res.status(409).json({
+        success: false,
+        message: 'You already have this badge'
+      });
+    }
+ 
+    res.status(500).json({
+      success: false,
+      message: 'Server error'
+    });
   }
 });
+
 
 //quest
-app.post('/api/questComplete/:uid/:bid', async(req,res) => {
+app.post('/api/questComplete/:uid/:qid', requireLogin, async (req, res) => {
   try {
-    console.log("im here");
-    const[rows] = await pool.execute(
-      'INSERT INTO badge_progress (badge_id, user_id) VALUES (?,?)', [req.params.bid,req.params.uid]
+    const userId = parseInt(req.params.uid, 10);
+    const questId = parseInt(req.params.qid, 10);
+ 
+    // Verify user is updating their own quests
+    if (req.session.uid !== userId) {
+      return res.status(403).json({
+        success: false,
+        message: 'Forbidden'
+      });
+    }
+ 
+    // Check if quest exists
+    const [questCheck] = await pool.execute(
+      'SELECT quest_id FROM quests WHERE quest_id = ?',
+      [questId]
     );
-    console.log("now here");
-    res.json({success:true, rows});
-    
-  } catch(err){
-    console.log("whoops");
-    console.error(err);
-    res.status(500).json({ message: "Server error"});
+ 
+    if (questCheck.length === 0) {
+      return res.status(404).json({
+        success: false,
+        message: 'Quest not found'
+      });
+    }
+ 
+    // Insert or update quest progress
+    const [result] = await pool.execute(
+      `INSERT INTO quest_progress (quest_id, user_id, is_complete) 
+       VALUES (?, ?, 1)
+       ON DUPLICATE KEY UPDATE is_complete = 1`,
+      [questId, userId]
+    );
+ 
+    console.log(`Quest ${questId} completed by user ${userId}`);
+ 
+    res.json({
+      success: true,
+      message: 'Quest completed successfully'
+    });
+ 
+  } catch (err) {
+    console.error('Quest complete error:', err);
+    res.status(500).json({
+      success: false,
+      message: 'Server error'
+    });
   }
 });
 
 
-app.get('/api/getImage/:id/:wid',async (req,res) => {
+//locations
+app.post('/api/locationExplore/:uid/:lid', requireLogin, async (req, res) => {
   try {
-    const id = req.params.id;
-    const wid = req.params.wid;
-    console.log('ids are set', id, wid);
-    const [rows] = await pool.execute(
-    'SELECT picture_url FROM images WHERE image_id =? AND word_id = ?', [id, wid]
-  );
-    console.log(rows[0].picture_url);
-  
-    if (rows.length === 0) {
-    return res.status(404).json({ message: "Image not found" });
-  }
+    const userId = parseInt(req.params.uid, 10);
+    const locationId = parseInt(req.params.lid, 10);
+ 
+    // Verify user is updating their own locations
+    if (req.session.uid !== userId) {
+      return res.status(403).json({
+        success: false,
+        message: 'Forbidden'
+      });
+    }
+ 
+    // Check if location exists
+    const [locationCheck] = await pool.execute(
+      'SELECT loc_id FROM locations WHERE loc_id = ?',
+      [locationId]
+    );
+ 
+    if (locationCheck.length === 0) {
+      return res.status(404).json({
+        success: false,
+        message: 'Location not found'
+      });
+    }
+ 
+    // Insert or update location progress
+    const [result] = await pool.execute(
+      `INSERT INTO location_progress (loc_id, user_id, is_exp) 
+       VALUES (?, ?, 1)
+       ON DUPLICATE KEY UPDATE is_exp = 1`,
+      [locationId, userId]
+    );
+ 
+    console.log(`Location ${locationId} explored by user ${userId}`);
+ 
     res.json({
+      success: true,
+      message: 'Location explored successfully'
+    });
+ 
+  } catch (err) {
+    console.error('Location explore error:', err);
+    res.status(500).json({
+      success: false,
+      message: 'Server error'
+    });
+  }
+});
+
+
+//others
+app.get('/api/getImage/:id/:wid', async (req, res) => {
+  try {
+    const imageId = parseInt(req.params.id, 10);
+    const wordId = parseInt(req.params.wid, 10);
+ 
+    console.log('Fetching image:', imageId, wordId);
+ 
+    const [rows] = await pool.execute(
+      'SELECT picture_url FROM images WHERE image_id = ? AND word_id = ?',
+      [imageId, wordId]
+    );
+ 
+    if (rows.length === 0) {
+      return res.status(404).json({
+        success: false,
+        message: 'Image not found'
+      });
+    }
+ 
+    res.json({
+      success: true,
       image: rows[0].picture_url
     });
-
-    } catch (error) {
-    console.error(error);
-    res.status(500).json({ message: "Server error" });
+ 
+  } catch (error) {
+    console.error('Get image error:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Server error'
+    });
   }
 });
 
-app.get('/', (req, res) => {
-  res.sendFile(path.join(__dirname, 'public', 'sugbohenyo', 'index.html'));
-});
 
-app.get('/signup', (req, res) => {
-  res.sendFile(path.join(__dirname, 'public', 'sugbohenyo', 'signup.html'));
-});
-
-app.get('/login', (req, res) => {
-  res.sendFile(path.join(__dirname, 'public', 'sugbohenyo', 'login.html'));
-});
-
-app.get('/dashboard', (req, res) => {
-  res.sendFile(path.join(__dirname, 'public', 'sugbohenyo', 'dashboard.html'));
-});
-
-app.get('/streetview', (req, res) => {
-  res.sendFile(path.join(__dirname, 'public', 'sugbohenyo', 'streetview.html'));
-});
-
-app.get('/map', (req, res) => {
-  res.sendFile(path.join(__dirname, 'public', 'sugbohenyo', 'map.html'));
-});
-
-app.get('/study', (req, res) => {
-  res.sendFile(path.join(__dirname, 'public', 'sugbohenyo', 'study.html'));
-});
-
-app.get('/adventure', (req, res) => {
-  res.sendFile(path.join(__dirname, 'public', 'sugbohenyo', 'adventure.html'));
-});
-
-app.get('/ag1', (req, res) => {
-  res.sendFile(path.join(__dirname, 'public', 'sugbohenyo', 'games', 'level1.html'));
-});
-
-app.get('/games/bantayan', (req, res) => {
-  res.sendFile(path.join(__dirname, 'public', 'sugbohenyo', 'games', 'bantayan.html'));
-});
-
-app.get('/games/badian', (req, res) => {
-  res.sendFile(path.join(__dirname, 'public', 'sugbohenyo', 'games', 'badian.html'));
-});
-
-app.get('/games/oslob', (req, res) => {
-  res.sendFile(path.join(__dirname, 'public', 'sugbohenyo', 'games', 'oslob.html'));
-});
-
-app.get('/games/moalboal', (req, res) => {
-  res.sendFile(path.join(__dirname, 'public', 'sugbohenyo', 'games', 'moalboal.html'));
-});
-
-app.get('/games/cebucity', (req, res) => {
-  res.sendFile(path.join(__dirname, 'public', 'sugbohenyo', 'games', 'cebucity.html'));
-});
-
-app.get('/games/carcar', (req, res) => {
-  res.sendFile(path.join(__dirname, 'public', 'sugbohenyo', 'games', 'carcar.html'));
-});
-
-app.get('/games/talisay', (req, res) => {
-  res.sendFile(path.join(__dirname, 'public', 'sugbohenyo', 'games', 'talisay.html'));
-});
-
-app.get('/games/battleofmactan', (req, res) => {  
-  res.sendFile(path.join(__dirname, 'public', 'sugbohenyo', 'games', 'level2.html'));
-}); 
-
-app.get('/games/medellin', (req, res) => {
-  res.sendFile(path.join(__dirname, 'public', 'sugbohenyo', 'games', 'medellin.html'));
-});
-
-app.get('/games/danao', (req, res) => {
-  res.sendFile(path.join(__dirname, 'public', 'sugbohenyo', 'games', 'danao.html'));
-});
-// app.get('/favicon.ico', (req, res) => {
-//   res.sendFile(path.join(__dirname, 'public', 'favicon.ico'));
-// });
-
-//  Moved up
-// app.use((req, res, next) => {
-//   console.log(req.method, req.url);
-//   next();
-// });
 
 //Dashboard api
-app.get('/api/dashboard_details/:uid', async (req, res) => {
-  const uid = req.params.uid;
+app.get('/api/dashboard_details/:uid', requireLogin, async (req, res) => {
   try {
-    const [user, stats, prog, badges, items] = await Promise.all([
-      // Get user info
-      pool.execute(
-        'SELECT username, user_points FROM users WHERE user_id = ?',
-        [uid]
-      ),
-      // Get stats (completed counts)
-      Promise.all([
-        pool.execute(
-          'SELECT COUNT(DISTINCT quest_id) as count FROM quest_progress WHERE user_id = ?',
-          [uid]
-        ),
-        pool.execute(
-          'SELECT COUNT(DISTINCT loc_id) as count FROM location_progress WHERE user_id = ?',
-          [uid]
-        ),
-        pool.execute(
-          'SELECT COUNT(DISTINCT badge_id) as count FROM badge_progress WHERE user_id = ?',
-          [uid]
-        )
-      ]),
-      // Get progress (total counts)
-      Promise.all([
-        pool.execute('SELECT COUNT(quest_id) as count FROM quests'),
-        pool.execute('SELECT COUNT(loc_id) as count FROM locations'),
-        pool.execute('SELECT COUNT(badge_id) as count FROM badges')
-      ]),
-      // Get badges
-      pool.execute(
-        'SELECT * FROM badge_progress WHERE user_id = ?',
-        [uid]
-      ),
-      // Get items
-      pool.execute(
-        'SELECT * FROM user_inventory WHERE user_id = ?',
-        [uid]
-      )
-    ]);
-
-    // Extract rows from results (pool.execute returns [rows, fields])
-    const userData = user[0][0]; // First row
-    const statsData = {
-      completedQuests: stats[0][0][0].count,
-      completedLocations: stats[1][0][0].count,
-      completedBadges: stats[2][0][0].count
-    };
-    const progData = {
-      totalQuests: prog[0][0][0].count,
-      totalLocations: prog[1][0][0].count,
-      totalBadges: prog[2][0][0].count
-    };
-    const badgesData = badges[0];
-    const itemsData = items[0];
-
+    const userId = parseInt(req.params.uid, 10);
+ 
+    // Single optimized query using JOINs and subqueries
+    const [dashboardData] = await pool.execute(
+      `SELECT 
+        u.username,
+        u.user_points,
+        
+        -- Completed counts
+        (SELECT COUNT(DISTINCT quest_id) 
+         FROM quest_progress 
+         WHERE user_id = u.user_id AND is_complete = 1) as completed_quests,
+        
+        (SELECT COUNT(DISTINCT loc_id) 
+         FROM location_progress 
+         WHERE user_id = u.user_id AND is_exp = 1) as completed_locations,
+        
+        (SELECT COUNT(DISTINCT badge_id) 
+         FROM badge_progress 
+         WHERE user_id = u.user_id) as completed_badges,
+        
+        -- Total counts
+        (SELECT COUNT(*) FROM quests) as total_quests,
+        (SELECT COUNT(*) FROM locations) as total_locations,
+        (SELECT COUNT(*) FROM badges) as total_badges,
+        (SELECT COUNT(*) FROM relics) as total_relics,
+        
+        -- User relics count
+        (SELECT COUNT(*) 
+         FROM user_inventory 
+         WHERE user_id = u.user_id) as completed_relics
+        
+       FROM users u
+       WHERE u.user_id = ?`,
+      [userId]
+    );
+ 
+    if (dashboardData.length === 0) {
+      return res.status(404).json({
+        success: false,
+        message: 'User not found'
+      });
+    }
+ 
+    const data = dashboardData[0];
+ 
+    // Get detailed badge information
+    const [badges] = await pool.execute(
+      `SELECT bp.badge_id, bp.user_id, b.badge_name, b.badge_des
+       FROM badge_progress bp
+       JOIN badges b ON bp.badge_id = b.badge_id
+       WHERE bp.user_id = ?`,
+      [userId]
+    );
+ 
+    // Get detailed relic information
+    const [relics] = await pool.execute(
+      `SELECT ui.relic_id, ui.user_id, r.relic_name, r.region_id
+       FROM user_inventory ui
+       JOIN relics r ON ui.relic_id = r.relic_id
+       WHERE ui.user_id = ?`,
+      [userId]
+    );
+ 
+    console.log(`Dashboard loaded for user ${userId}`);
+ 
     res.json({
       success: true,
       data: {
-        username: userData.username,
-        userPoints: userData.user_points,
-        stats: statsData,
-        progress: progData,
-        badges: badgesData,
-        inventory: itemsData
+        username: data.username,
+        userPoints: data.user_points,
+        stats: {
+          completedQuests: data.completed_quests,
+          completedLocations: data.completed_locations,
+          completedBadges: data.completed_badges,
+          completedRelics: data.completed_relics
+        },
+        progress: {
+          totalQuests: data.total_quests,
+          totalLocations: data.total_locations,
+          totalBadges: data.total_badges,
+          totalRelics: data.total_relics
+        },
+        badges: badges,
+        inventory: relics
       }
     });
-
+ 
   } catch (err) {
-    console.error(err);
+    console.error('Dashboard error:', err);
     res.status(500).json({
       success: false,
-      message: 'Server Error'
+      message: 'Server error'
     });
   }
+});
+
+
+
+// STATIC PAGE ROUTES
+ 
+app.get('/', (req, res) => {
+  res.sendFile(path.join(__dirname, 'public', 'sugbohenyo', 'index.html'));
+});
+ 
+app.get('/signup', (req, res) => {
+  res.sendFile(path.join(__dirname, 'public', 'sugbohenyo', 'signup.html'));
+});
+ 
+app.get('/login', (req, res) => {
+  res.sendFile(path.join(__dirname, 'public', 'sugbohenyo', 'login.html'));
+});
+ 
+app.get('/dashboard', (req, res) => {
+  res.sendFile(path.join(__dirname, 'public', 'sugbohenyo', 'dashboard.html'));
+});
+ 
+app.get('/streetview', (req, res) => {
+  res.sendFile(path.join(__dirname, 'public', 'sugbohenyo', 'streetview.html'));
+});
+ 
+app.get('/map', (req, res) => {
+  res.sendFile(path.join(__dirname, 'public', 'sugbohenyo', 'map.html'));
+});
+ 
+app.get('/study', (req, res) => {
+  res.sendFile(path.join(__dirname, 'public', 'sugbohenyo', 'study.html'));
+});
+ 
+app.get('/adventure', (req, res) => {
+  res.sendFile(path.join(__dirname, 'public', 'sugbohenyo', 'adventure.html'));
+});
+ 
+app.get('/testing', (req, res) => {
+  res.sendFile(path.join(__dirname, 'public', 'testing.html'));
+});
+ 
+
+// GAME ROUTES
+
+ 
+app.get('/ag1', (req, res) => {
+  res.sendFile(path.join(__dirname, 'public', 'sugbohenyo', 'games', 'level1.html'));
+});
+ 
+app.get('/games/bantayan', (req, res) => {
+  res.sendFile(path.join(__dirname, 'public', 'sugbohenyo', 'games', 'bantayan.html'));
+});
+ 
+app.get('/games/badian', (req, res) => {
+  res.sendFile(path.join(__dirname, 'public', 'sugbohenyo', 'games', 'badian.html'));
+});
+ 
+app.get('/games/oslob', (req, res) => {
+  res.sendFile(path.join(__dirname, 'public', 'sugbohenyo', 'games', 'oslob.html'));
+});
+ 
+app.get('/games/moalboal', (req, res) => {
+  res.sendFile(path.join(__dirname, 'public', 'sugbohenyo', 'games', 'moalboal.html'));
+});
+ 
+app.get('/games/cebucity', (req, res) => {
+  res.sendFile(path.join(__dirname, 'public', 'sugbohenyo', 'games', 'cebucity.html'));
+});
+ 
+app.get('/games/carcar', (req, res) => {
+  res.sendFile(path.join(__dirname, 'public', 'sugbohenyo', 'games', 'carcar.html'));
+});
+ 
+app.get('/games/talisay', (req, res) => {
+  res.sendFile(path.join(__dirname, 'public', 'sugbohenyo', 'games', 'talisay.html'));
+});
+ 
+app.get('/games/battleofmactan', (req, res) => {
+  res.sendFile(path.join(__dirname, 'public', 'sugbohenyo', 'games', 'level2.html'));
+});
+ 
+app.get('/games/medellin', (req, res) => {
+  res.sendFile(path.join(__dirname, 'public', 'sugbohenyo', 'games', 'medellin.html'));
+});
+ 
+app.get('/games/danao', (req, res) => {
+  res.sendFile(path.join(__dirname, 'public', 'sugbohenyo', 'games', 'danao.html'));
+});
+ 
+
+// ERROR HANDLING
+
+ 
+// 404 Handler
+app.use((req, res) => {
+  res.status(404).json({
+    success: false,
+    message: 'Route not found'
+  });
+});
+ 
+// Global error handler
+app.use((err, req, res, next) => {
+  console.error('Unhandled error:', err);
+  res.status(500).json({
+    success: false,
+    message: 'Internal server error'
+  });
 });
 
 const PORT = process.env.PORT || 8080;
 app.listen(PORT, () => console.log(`Server running on http://localhost:${PORT}`));
+
+// Graceful shutdown
+process.on('SIGTERM', () => {
+  console.log('SIGTERM received, closing server gracefully...');
+  pool.end(() => {
+    console.log('Database pool closed.');
+    process.exit(0);
+  });
+});
+ 
+module.exports = { app, pool };

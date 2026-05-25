@@ -121,8 +121,7 @@ async function handleSignupSubmit(event) {
                 lname: formData.lastname,
                 uname: formData.username,
                 email: formData.email,
-                pass: formData.password,
-                points: 0
+                pass: formData.password
             })
         });
 
