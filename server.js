@@ -19,6 +19,16 @@ const pool = mysql.createPool({
   connectionLimit: 10
 });
 
+//Database connection
+pool.getConnection()
+  .then(conn => {
+    console.log('✓ Database connected successfully');
+    conn.release();
+  })
+  .catch(err => {
+    console.error('✗ Database connection failed:', err.message);
+  });
+
 module.exports = pool;
 
 //Session Store
@@ -84,9 +94,17 @@ app.use(express.static('public', {
 
 //testing for API of AI
 app.post('/promptItinerary', async (req, res) => {
-  console.log("ran prompt");
+  try {
+    console.log("generating itinerary prompt");
   
   const userInput = req.body.message;
+
+  if (!userInput || userInput.trim().length === 0) {
+      return res.status(400).json({
+        success: false,
+        message: 'Message is required'
+      });
+    }
 
   const response = await groq.chat.completions.create({
     model: "llama-3.3-70b-versatile",
@@ -103,41 +121,54 @@ app.post('/promptItinerary', async (req, res) => {
   });
 
   res.json({
-    reply: response.choices[0].message.content
-  })
+      success: true,
+      reply: response.choices[0].message.content
+    });
+  } catch (error) {
+    console.error('Itinerary generation error:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Failed to generate itinerary'
+    });
+  }
+  
 });
 
 app.post('/funfact', async (req, res) => {
   try {
-    console.log("funfact prompt");
-
+    console.log("Generating fun fact");
+ 
     const { topic } = req.body;
-
+ 
+    if (!topic || topic.trim().length === 0) {
+      return res.status(400).json({
+        success: false,
+        title: "Fun Fact",
+        fact: "Please provide a topic."
+      });
+    }
+ 
     const response = await groq.chat.completions.create({
       model: "llama-3.3-70b-versatile",
       messages: [
         {
           role: "system",
-          content: `
-You generate short educational travel fun fact for games.
-
-Return ONLY valid JSON.
-
+          content: `You generate short educational travel fun facts for games about Cebu, Philippines.
+ 
+Return ONLY valid JSON with NO markdown, NO code blocks, NO explanations.
+ 
 Format:
 {
   "title": "short place or topic name",
   "fact": "short engaging fun fact"
 }
-
+ 
 Rules:
-- only 1 specifc fun fact
-- fact must be under 30 words
-- make it fun and easy to understand
-- no markdown
-- no HTML
-- no explanations
-- no extra text outside JSON
-`
+- Only 1 specific fun fact
+- Fact must be under 30 words
+- Make it fun and easy to understand
+- Focus on Cebuano culture, history, or geography
+- No markdown, no HTML, no extra text`
         },
         {
           role: "user",
@@ -145,21 +176,28 @@ Rules:
         }
       ]
     });
-
-    // Convert AI string -> actual JSON
-    const aiReply = JSON.parse(
-      response.choices[0].message.content
-    );
-
-    res.json(aiReply);
-
+ 
+    // Parse AI response
+    const aiReply = response.choices[0].message.content.trim();
+    const jsonMatch = aiReply.match(/\{[\s\S]*\}/);
+    
+    if (!jsonMatch) {
+      throw new Error('Invalid JSON response from AI');
+    }
+ 
+    const factData = JSON.parse(jsonMatch[0]);
+ 
+    res.json({
+      success: true,
+      ...factData
+    });
+ 
   } catch (error) {
-    console.error(error);
-
+    console.error('Fun fact error:', error);
     res.status(500).json({
+      success: false,
       title: "Fun Fact",
-      fact: "Unable to generate fun fact.",
-      category: "general"
+      fact: "Unable to generate fun fact at this time."
     });
   }
 });
@@ -341,7 +379,7 @@ app.get('/api/getRelic/:uid',async (req,res) => {
 app.post('/api/obtainRelic/:uid/:rid', async(req,res) => {
   try {
     const[rows] = await pool.execute(
-    'INSERT INTO user_inventory (relic_id, user_id) VALUES ? ?', [req.params.rid,req.params.uid]
+    'INSERT INTO user_inventory (relic_id, user_id) VALUES (?,?)', [req.params.rid,req.params.uid]
     );
     console.log('stored relic');
     return res.json({sucess: true, message: "relic stored"});
