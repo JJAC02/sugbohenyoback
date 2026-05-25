@@ -107,6 +107,63 @@ app.post('/promptItinerary', async (req, res) => {
   })
 });
 
+app.post('/funfact', async (req, res) => {
+  try {
+    console.log("funfact prompt");
+
+    const { topic } = req.body;
+
+    const response = await groq.chat.completions.create({
+      model: "llama-3.3-70b-versatile",
+      messages: [
+        {
+          role: "system",
+          content: `
+You generate short educational travel fun fact for games.
+
+Return ONLY valid JSON.
+
+Format:
+{
+  "title": "short place or topic name",
+  "fact": "short engaging fun fact"
+}
+
+Rules:
+- only 1 specifc fun fact
+- fact must be under 30 words
+- make it fun and easy to understand
+- no markdown
+- no HTML
+- no explanations
+- no extra text outside JSON
+`
+        },
+        {
+          role: "user",
+          content: topic
+        }
+      ]
+    });
+
+    // Convert AI string -> actual JSON
+    const aiReply = JSON.parse(
+      response.choices[0].message.content
+    );
+
+    res.json(aiReply);
+
+  } catch (error) {
+    console.error(error);
+
+    res.status(500).json({
+      title: "Fun Fact",
+      fact: "Unable to generate fun fact.",
+      category: "general"
+    });
+  }
+});
+
 app.get('/testing', (req, res) => {
   res.sendFile(path.join(__dirname, 'public', 'testing.html'));
 });
@@ -261,7 +318,7 @@ app.post('/api/storePoints/:id/:score', async (req, res) => {
       console.log("not found");
       return res.status(404).json({ error: 'User not found' });
     }
-    console.log("saving error");
+    console.log("save success");
     res.json({ success: true, message: 'Points updated' });
   } catch (err) {
     res.status(500).json({ error: err.message });
