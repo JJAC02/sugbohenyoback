@@ -20,7 +20,8 @@ CREATE TABLE users (
 CREATE TABLE ranks (
 	rank_id      INT                 PRIMARY KEY AUTO_INCREMENT,
 	rank_name    VARCHAR(50)         NOT NULL,
-	point_req    INT                 NOT NULL
+	lower_limit  INT                 NOT NULL,
+	upper_limit  INT                 NOT NULL
 
 )ENGINE = InnoDB
 DEFAULT CHARSET=utf8mb4
