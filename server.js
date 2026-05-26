@@ -77,6 +77,21 @@ function requireLogin(req, res, next) {
   next();
 }
 
+function validateScore(score) {
+  // Check if score is a valid number
+  if (isNaN(score) || !isFinite(score)) {
+    return false;
+  }
+  
+  // Check if score is within reasonable bounds (adjust as needed)
+  // Prevents negative scores and unreasonably high scores
+  if (score < 0 || score > 5000) {
+    return false;
+  }
+  
+  return true;
+}
+
 app.use(express.static('public', {
   setHeaders: (res, filePath) => {
     // Fix MIME types for JavaScript files
