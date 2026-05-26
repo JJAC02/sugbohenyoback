@@ -880,6 +880,10 @@ app.get('/adventure', (req, res) => {
 app.get('/testing', (req, res) => {
   res.sendFile(path.join(__dirname, 'public', 'testing.html'));
 });
+
+app.get('/itinerary', (req, res) => {
+  res.sendFile(path.join(__dirname, 'public', 'sugbohenyo', 'itinerary.html'));
+});
  
 
 // GAME ROUTES

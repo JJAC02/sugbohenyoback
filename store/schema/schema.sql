@@ -1,14 +1,14 @@
 CREATE TABLE users (
 	user_id       INT                PRIMARY KEY AUTO_INCREMENT,
 	email         VARCHAR(320)       NOT NULL UNIQUE,
-	username      VARCHAR(255)       NULL UNIQUE,
+	username      VARCHAR(255)       NOT NULL UNIQUE,
 	created_at    DATETIME(6)        NOT NULL DEFAULT CURRENT_TIMESTAMP(6),
 	updated_at    DATETIME(6)        NOT NULL DEFAULT CURRENT_TIMESTAMP(6) ON UPDATE CURRENT_TIMESTAMP(6),
 	first_name    VARCHAR(255)       NOT NULL,
 	last_name     VARCHAR(255)       NOT NULL,
 	password_hash VARBINARY(255)     NOT NULL,
 	profile_url   VARCHAR(255)       NULL,
-	user_points   INT                NULL,
+	user_points   INT                NOT NULL DEFAULT 0,
 	description   TEXT
 
 ) ENGINE=InnoDB
@@ -19,7 +19,7 @@ CREATE TABLE users (
 
 CREATE TABLE ranks (
 	rank_id      INT                 PRIMARY KEY AUTO_INCREMENT,
-	rank_name    VARCHAR(50)         NOT NULL,
+	rank_name    VARCHAR(50)         NOT NULL UNIQUE,
 	lower_limit  INT                 NOT NULL,
 	upper_limit  INT                 NOT NULL
 
@@ -31,7 +31,7 @@ COLLATE=utf8mb4_unicode_ci;
 
   CREATE TABLE regions (
 	region_id    INT                 PRIMARY KEY AUTO_INCREMENT,
-	region_name  VARCHAR(50)         NOT NULL
+	region_name  VARCHAR(50)         NOT NULL UNIQUE
 
 )ENGINE = InnoDB
 DEFAULT CHARSET=utf8mb4
@@ -41,7 +41,7 @@ COLLATE=utf8mb4_unicode_ci;
 
 CREATE TABLE locations (
     loc_id      INT                  PRIMARY KEY AUTO_INCREMENT,
-    loc_name    VARCHAR(255)         NOT NULL,
+    loc_name    VARCHAR(255)         NOT NULL UNIQUE,
 	longitude   DECIMAL(10,6)        ,
 	latitude    DECIMAL(10,6)        
 
@@ -96,7 +96,8 @@ CREATE TABLE quest_progress (
 	is_complete     TINYINT(1)        DEFAULT 0,
 
 	CONSTRAINT pk_user_quest PRIMARY KEY(user_id, quest_id),
-	FOREIGN KEY (user_id) REFERENCES users(user_id),
+	FOREIGN KEY (user_id) REFERENCES users(user_id)
+	ON DELETE CASCADE,
 	FOREIGN KEY (quest_id) REFERENCES quests(quest_id)
 	ON DELETE CASCADE
 
@@ -112,7 +113,8 @@ CREATE TABLE location_progress (
 	is_exp         TINYINT(1)         DEFAULT 0,
 
 	CONSTRAINT pk_user_locs PRIMARY KEY(user_id, loc_id),
-	FOREIGN KEY (user_id) REFERENCES users(user_id),
+	FOREIGN KEY (user_id) REFERENCES users(user_id)
+	ON DELETE CASCADE,
 	FOREIGN KEY (loc_id) REFERENCES locations(loc_id)
 	ON DELETE CASCADE
 
@@ -127,7 +129,8 @@ CREATE TABLE badge_progress (
 	user_id      INT                 NOT NULL,
 	
 	CONSTRAINT pk_badge_user PRIMARY KEY(badge_id,user_id),
-	FOREIGN KEY(badge_id) REFERENCES badges(badge_id),
+	FOREIGN KEY(badge_id) REFERENCES badges(badge_id)
+	ON DELETE CASCADE,
     FOREIGN KEY(user_id) REFERENCES users(user_id)
 	ON DELETE CASCADE
 
@@ -142,7 +145,8 @@ CREATE TABLE user_inventory (
 	user_id        INT          NOT NULL,
 
 	CONSTRAINT pk_relic_user PRIMARY KEY(relic_id,user_id),
-	FOREIGN KEY(relic_id) REFERENCES relics(relic_id),
+	FOREIGN KEY(relic_id) REFERENCES relics(relic_id)
+	ON DELETE CASCADE,
     FOREIGN KEY(user_id) REFERENCES users(user_id)
 	ON DELETE CASCADE
 
@@ -153,16 +157,22 @@ COLLATE=utf8mb4_unicode_ci;
 
 
 CREATE TABLE user_itineraries (
-	itinerary_id    INT           NOT NULL,
-	user_id         INT           NOT NULL,
-	item            MEDIUMTEXT    NOT NULL,
+    itinerary_id   INT          PRIMARY KEY AUTO_INCREMENT,
+    user_id        INT          NOT NULL,
+    loc_id         INT          NOT NULL,
+    itinerary_plan MEDIUMTEXT   NOT NULL,
+    created_at     DATETIME(6)  DEFAULT CURRENT_TIMESTAMP(6),
 
-	CONSTRAINT fk_user_itinerary
-	FOREIGN KEY(user_id) REFERENCES users(user_id)
-	ON DELETE CASCADE
-	
+    CONSTRAINT fk_user_itinerary_user
+        FOREIGN KEY(user_id)
+        REFERENCES users(user_id)
+        ON DELETE CASCADE,
 
-)ENGINE = InnoDB
+    CONSTRAINT fk_user_itinerary_loc
+        FOREIGN KEY(loc_id)
+        REFERENCES locations(loc_id)
+
+) ENGINE=InnoDB
 DEFAULT CHARSET=utf8mb4
 COLLATE=utf8mb4_unicode_ci;
 
