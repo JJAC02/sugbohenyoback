@@ -129,7 +129,7 @@ async function handleSignupSubmit(event) {
 
         if (data.goods === 1) {
             console.log('Account created successfully');
-            window.location.href = '/dashboard';
+            window.location.href = '/adventure';
         } else {
             handleSignupError(data.error || 'An error occurred');
         }
@@ -302,7 +302,7 @@ async function handleLoginSubmit(event) {
 
         if (data.success) {
             console.log('Login successful');
-            window.location.href = '/dashboard';
+            window.location.href = '/adventure';
         } else {
             showLoginError(data.message || 'Invalid username or password', 'password');
         }

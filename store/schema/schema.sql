@@ -161,6 +161,7 @@ CREATE TABLE user_itineraries (
     user_id        INT          NOT NULL,
     loc_id         INT          NOT NULL,
     itinerary_plan MEDIUMTEXT   NOT NULL,
+	duration       VARCHAR(50)  NULL,
     created_at     DATETIME(6)  DEFAULT CURRENT_TIMESTAMP(6),
 
     CONSTRAINT fk_user_itinerary_user

@@ -537,6 +537,55 @@ app.post('/api/obtainRelic/:uid/:rid', requireLogin, async (req, res) => {
     });
   }
 });
+
+app.get('/api/relicInfo/:uid', requireLogin, async (req, res) => {
+  try {
+    const userId = req.params.uid;
+
+    // basic validation
+    if (!userId || isNaN(userId)) {
+      return res.status(400).json({
+        success: false,
+        message: 'Invalid user ID'
+      });
+    }
+
+    const [rows] = await pool.execute(
+      `
+      SELECT
+        (SELECT COUNT(*) FROM relics) AS total_relics,
+
+        (
+          SELECT COUNT(*)
+          FROM user_inventory
+          WHERE user_id = ?
+        ) AS completed_relics
+      `,
+      [userId]
+    );
+
+    // extra safety check
+    if (!rows || rows.length === 0) {
+      return res.status(404).json({
+        success: false,
+        message: 'Relic information not found'
+      });
+    }
+
+    return res.status(200).json({
+      success: true,
+      data: rows[0]
+    });
+
+  } catch (err) {
+    console.error('Error fetching relic info:', err);
+
+    return res.status(500).json({
+      success: false,
+      message: 'Internal server error'
+    });
+  }
+});
 //relics end here
 
 
@@ -841,6 +890,179 @@ app.get('/api/dashboard_details/:uid', requireLogin, async (req, res) => {
   }
 });
 
+//ITINERARIES
+app.post('/api/saveItinerary/:uid/', requireLogin, async (req, res) => {
+  try {
+    const userId = parseInt(req.params.uid, 10);
+    const { locationName, duration, itineraryPlan } = req.body;
+
+    // Verify the user is accessing their own data
+    if (req.session.uid !== userId) {
+      return res.status(403).json({
+        success: false,
+        message: 'Forbidden: Cannot save itinerary for another user'
+      });
+    }
+
+    // Validate required fields
+    if (!locationName || !duration || !itineraryPlan) {
+      return res.status(400).json({
+        success: false,
+        message: 'Missing required fields: locationName, duration, itineraryPlan'
+      });
+    }
+
+    // Get location ID from locations table
+    const [locationRows] = await pool.execute(
+      'SELECT loc_id FROM locations WHERE loc_name = ?',
+      [locationName]
+    );
+
+    if (locationRows.length === 0) {
+      return res.status(404).json({
+        success: false,
+        message: 'Location not found in database'
+      });
+    }
+
+    const locId = locationRows[0].loc_id;
+
+    // Check for duplicate itinerary (same user, location, duration, and plan)
+    const [duplicateCheck] = await pool.execute(
+      `SELECT itinerary_id FROM user_itineraries 
+       WHERE user_id = ? AND loc_id = ? AND itinerary_plan = ?`,
+      [userId, locId, itineraryPlan]
+    );
+
+    if (duplicateCheck.length > 0) {
+      return res.status(409).json({
+        success: false,
+        message: 'This itinerary is already saved'
+      });
+    }
+
+    // Insert the itinerary
+    const [result] = await pool.execute(
+      `INSERT INTO user_itineraries (user_id, loc_id, itinerary_plan, duration) 
+       VALUES (?, ?, ?, ?)`,
+      [userId, locId, itineraryPlan, duration]
+    );
+
+    console.log(`Itinerary saved for user ${userId}, location: ${locationName}`);
+
+    res.json({
+      success: true,
+      message: 'Itinerary saved successfully',
+      itineraryId: result.insertId
+    });
+
+  } catch (err) {
+    console.error('Save itinerary error:', err);
+    res.status(500).json({
+      success: false,
+      message: 'Server error while saving itinerary'
+    });
+  }
+});
+
+app.post('/api/getItineraries/:uid/', requireLogin, async (req, res) => {
+  try {
+    const userId = parseInt(req.params.uid, 10);
+
+    // Verify the user is accessing their own data
+    if (req.session.uid !== userId) {
+      return res.status(403).json({
+        success: false,
+        message: 'Forbidden: Cannot access another user\'s itineraries'
+      });
+    }
+
+    // Fetch all itineraries for this user with location details
+    const [itineraries] = await pool.execute(
+      `SELECT 
+        ui.itinerary_id,
+        ui.user_id,
+        ui.loc_id,
+        ui.itinerary_plan,
+        ui.duration,
+        ui.created_at,
+        l.loc_name
+       FROM user_itineraries ui
+       JOIN locations l ON ui.loc_id = l.loc_id
+       WHERE ui.user_id = ?
+       ORDER BY ui.created_at DESC`,
+      [userId]
+    );
+
+    console.log(`Fetched ${itineraries.length} itineraries for user ${userId}`);
+
+    res.json({
+      success: true,
+      itineraries: itineraries.map(item => ({
+        itineraryId: item.itinerary_id,
+        name: item.loc_name,
+        duration: item.duration || 'Custom',
+        content: item.itinerary_plan,
+        date: new Date(item.created_at).toLocaleDateString('en-PH', { 
+          month: 'short', 
+          day: 'numeric', 
+          year: 'numeric' 
+        }),
+        rawDate: item.created_at
+      }))
+    });
+
+  } catch (err) {
+    console.error('Get itineraries error:', err);
+    res.status(500).json({
+      success: false,
+      message: 'Server error while fetching itineraries'
+    });
+  }
+});
+
+app.delete('/api/deleteItinerary/:uid/:itineraryId', requireLogin, async (req, res) => {
+  try {
+    const userId = parseInt(req.params.uid, 10);
+    const itineraryId = parseInt(req.params.itineraryId, 10);
+
+    // Verify the user is accessing their own data
+    if (req.session.uid !== userId) {
+      return res.status(403).json({
+        success: false,
+        message: 'Forbidden: Cannot delete another user\'s itinerary'
+      });
+    }
+
+    // Delete the itinerary (only if it belongs to this user)
+    const [result] = await pool.execute(
+      `DELETE FROM user_itineraries 
+       WHERE itinerary_id = ? AND user_id = ?`,
+      [itineraryId, userId]
+    );
+
+    if (result.affectedRows === 0) {
+      return res.status(404).json({
+        success: false,
+        message: 'Itinerary not found or does not belong to this user'
+      });
+    }
+
+    console.log(`Itinerary ${itineraryId} deleted by user ${userId}`);
+
+    res.json({
+      success: true,
+      message: 'Itinerary deleted successfully'
+    });
+
+  } catch (err) {
+    console.error('Delete itinerary error:', err);
+    res.status(500).json({
+      success: false,
+      message: 'Server error while deleting itinerary'
+    });
+  }
+});
 
 
 // STATIC PAGE ROUTES
