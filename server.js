@@ -651,10 +651,10 @@ app.post('/api/questComplete/:uid/:qid', requireLogin, async (req, res) => {
 
 
 //locations
-app.post('/api/locationExplore/:uid/:lid', requireLogin, async (req, res) => {
+app.post('/api/locationExplore/:uid/:locname', requireLogin, async (req, res) => {
   try {
-    const userId = parseInt(req.params.uid, 10);
-    const locationId = parseInt(req.params.lid, 10);
+    const userId = parseInt(req.params.uid, 10);  // Keep as number (user ID)
+    const locationName = req.params.locname;     // Keep as string
  
     // Verify user is updating their own locations
     if (req.session.uid !== userId) {
@@ -664,10 +664,10 @@ app.post('/api/locationExplore/:uid/:lid', requireLogin, async (req, res) => {
       });
     }
  
-    // Check if location exists
+    // Check if location exists BY NAME instead of ID
     const [locationCheck] = await pool.execute(
-      'SELECT loc_id FROM locations WHERE loc_id = ?',
-      [locationId]
+      'SELECT loc_id FROM locations WHERE loc_name = ?',  // Changed to loc_name
+      [locationName]
     );
  
     if (locationCheck.length === 0) {
@@ -676,6 +676,9 @@ app.post('/api/locationExplore/:uid/:lid', requireLogin, async (req, res) => {
         message: 'Location not found'
       });
     }
+    
+    // Get the actual loc_id from the result
+    const locationId = locationCheck[0].loc_id;
  
     // Insert or update location progress
     const [result] = await pool.execute(
@@ -685,7 +688,7 @@ app.post('/api/locationExplore/:uid/:lid', requireLogin, async (req, res) => {
       [locationId, userId]
     );
  
-    console.log(`Location ${locationId} explored by user ${userId}`);
+    console.log(`Location "${locationName}" (ID: ${locationId}) explored by user ${userId}`);
  
     res.json({
       success: true,
