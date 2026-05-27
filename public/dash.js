@@ -2,6 +2,7 @@
 
 // State management
 let userData = null;
+let currentUserId = null;
 let isLoading = true;
 
 /**
@@ -25,6 +26,7 @@ async function loadUser() {
     }
 
     console.log('User authenticated:', authData.username);
+    currentUserId = authData.uid;
 
     // Step 2: Fetch dashboard data
     const dashRes = await fetch(`/api/dashboard_details/${authData.uid}`);
@@ -46,7 +48,7 @@ async function loadUser() {
 
     // Step 3: Populate UI with data
     populateDashboard(userData);
-
+    await getBadge(userData);
     hideLoadingState();
 
   } catch (error) {
@@ -54,11 +56,11 @@ async function loadUser() {
     showErrorState(error.message);
   }
 }
-
 /**
  * Populate all dashboard elements with user data
  */
 function populateDashboard(data) {
+
   // Profile Section
   updateProfileSection(data);
 
@@ -414,6 +416,164 @@ function showErrorState(message) {
 
   document.body.appendChild(errorOverlay);
 }
+
+// function to get badges
+async function getBadge(data) {
+  try {
+
+    // Use already loaded user data
+   if (!currentUserId) {
+    console.error('Cannot obtain badge: user not logged in');
+    return;
+  }
+
+    const badgesToAward = [];
+
+    const completedRelics = data.stats.completedRelics || 0;
+    const completedQuests = data.stats.completedQuests || 0;
+    const completedLocations = data.stats.completedLocations || 0;
+
+    const totalRelics = data.progress.totalRelics || 0;
+    const totalLocations = data.progress.totalLocations || 0;
+    const totalQuests = data.progress.totalQuests || 0;
+
+    // Badge 1 -> 1 completed relic
+    if (completedRelics >= 1) {
+      badgesToAward.push(1);
+    }
+
+    // Badge 2 -> 1 quest and 1 location
+    if (
+      completedQuests >= 1 &&
+      completedLocations >= 1
+    ) {
+      badgesToAward.push(2);
+    }
+
+    // Badge 3 -> 25 locations
+    if (completedLocations >= 25) {
+      badgesToAward.push(3);
+    }
+
+    // Badge 4 -> 5 quests
+    if (completedQuests >= 5) {
+      badgesToAward.push(4);
+    }
+
+    // Badge 5 -> 4 relics
+    if (completedRelics >= 4) {
+      badgesToAward.push(5);
+    }
+
+    // Badge 6 -> all relics
+    if (
+      totalRelics > 0 &&
+      completedRelics >= totalRelics
+    ) {
+      badgesToAward.push(6);
+    }
+
+    // Badge 7 -> all locations
+    if (
+      totalLocations > 0 &&
+      completedLocations >= totalLocations
+    ) {
+      badgesToAward.push(7);
+    }
+
+    // Badge 8 -> all quests
+    if (
+      totalQuests > 0 &&
+      completedQuests >= totalQuests
+    ) {
+      badgesToAward.push(8);
+    }
+
+    // Badge 9 -> completed quest_id 10
+    // ONLY if your API provides completedQuestIds
+    if (
+      Array.isArray(data.completedQuestIds) &&
+      data.completedQuestIds.includes(10)
+    ) {
+      badgesToAward.push(9);
+    }
+
+    // Remove already earned badges
+    const earnedBadgeIds = data.badges.map(b => b.badge_id);
+
+    const filteredBadges = badgesToAward.filter(
+      bid => !earnedBadgeIds.includes(bid)
+    );
+
+    if (filteredBadges.length === 0) {
+      console.log('No new badges earned');
+      return;
+    }
+
+    // Award badges
+    for (const bid of filteredBadges) {
+
+      const res = await fetch(
+        `/api/obtainBadge/${currentUserId}/${bid}`,
+        {
+          method: 'POST',
+          credentials: 'include'
+        }
+      );
+
+      if (!res.ok) {
+
+        if (res.status === 409) {
+          console.log(`Badge ${bid} already obtained`);
+          continue;
+        }
+
+        console.error(`Failed to obtain badge ${bid}`);
+        continue;
+      }
+
+      console.log(`Badge ${bid} obtained`);
+
+    }
+    await refreshBadges();
+
+  } catch (err) {
+    console.error('getBadge() failed:', err);
+  }
+}
+
+async function refreshBadges() {
+  try {
+
+    const res = await fetch(
+      `/api/dashboard_details/${currentUserId}`
+    );
+
+    if (!res.ok) {
+      throw new Error('Failed to refresh badges');
+    }
+
+    const refreshed = await res.json();
+
+    if (!refreshed.success) {
+      throw new Error(refreshed.message);
+    }
+
+    // Update global dashboard data
+    userData = refreshed.data;
+
+    // Refresh only affected sections
+    updateBadgesSection(userData);
+    updateStatsSection(userData);
+    updateProgressBars(userData);
+
+    console.log('Badges refreshed');
+
+  } catch (err) {
+    console.error('refreshBadges failed:', err);
+  }
+}
+
 
 /**
  * Escape HTML to prevent XSS
