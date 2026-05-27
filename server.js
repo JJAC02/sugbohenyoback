@@ -237,55 +237,53 @@ app.post('/api/createUser', async (req, res) => {
 
     console.log('Creating user account');
     const passHash = await bcrypt.hash(pass, 10);
- 
+
     const [result] = await pool.execute(
       `INSERT INTO users (email, first_name, last_name, username, password_hash, user_points) 
        VALUES (?, ?, ?, ?, ?, ?)`,
       [email, fname, lname, uname, passHash, 0]
     );
- 
+
     console.log('User created successfully:', result.insertId);
-    
-    //auto-login
+
+    // Auto-login after registration
     req.session.regenerate(err => {
       if (err) {
         console.error('Session regeneration error:', err);
-        return res.json({
+        return res.status(201).json({
           success: true,
-          message: 'Account created successfully',
-          goods: 1
+          message: 'Account created successfully'
         });
       }
- 
+
       req.session.uid = result.insertId;
       req.session.username = uname;
- 
-      return res.json({
+
+      return res.status(201).json({
         success: true,
         message: 'Account created successfully',
-        goods: 1,
         userId: result.insertId
       });
     });
   } catch (err) {
     console.error('Create user error:', err);
- 
-    // Handle duplicate entry errors
+
+    // Duplicate username or email
     if (err.code === 'ER_DUP_ENTRY') {
       const field = err.message.includes('email') ? 'email' : 'username';
       return res.status(409).json({
         success: false,
-        message: `This ${field} is already taken`,
-        goods: 0
+        code: 'DUPLICATE_FIELD',
+        field,
+        message: `This ${field} is already taken`
       });
     }
- 
+
     return res.status(500).json({
       success: false,
-      message: 'Server error during registration',
-      goods: 0
+      code: 'SERVER_ERROR',
+      message: 'Server error during registration'
     });
-
   }
 });
 
@@ -296,7 +294,9 @@ app.post('/api/loginUser', async (req, res) => {
     if (!uname || !pass) {
       return res.status(400).json({
         success: false,
-        message: 'Username and password required'
+        code: 'MISSING_FIELDS',
+        fields: [...(!uname ? ['username'] : []), ...(!pass ? ['password'] : [])],
+        message: 'Username and password are required'
       });
     }
 
@@ -310,6 +310,7 @@ app.post('/api/loginUser', async (req, res) => {
     if (rows.length === 0) {
       return res.status(401).json({
         success: false,
+        code: 'INVALID_CREDENTIALS',
         message: 'Invalid username or password'
       });
     }
@@ -324,25 +325,27 @@ app.post('/api/loginUser', async (req, res) => {
     if (!isMatch) {
       return res.status(401).json({
         success: false,
+        code: 'INVALID_CREDENTIALS',
         message: 'Invalid username or password'
       });
     }
 
-    // regenerate session for security
+    // Regenerate session for security
     req.session.regenerate(err => {
       if (err) {
         console.error('Session regeneration error:', err);
         return res.status(500).json({
           success: false,
-          message: 'Session error'
+          code: 'SESSION_ERROR',
+          message: 'Session error, please try again'
         });
       }
- 
+
       req.session.uid = user.user_id;
       req.session.username = user.username;
- 
+
       console.log('Login successful for user:', user.username);
- 
+
       return res.json({
         success: true,
         message: 'Login successful',
@@ -354,6 +357,7 @@ app.post('/api/loginUser', async (req, res) => {
     console.error('Login error:', err);
     return res.status(500).json({
       success: false,
+      code: 'SERVER_ERROR',
       message: 'Server error during login'
     });
   }
@@ -856,6 +860,18 @@ app.get('/api/dashboard_details/:uid', requireLogin, async (req, res) => {
        WHERE ui.user_id = ?`,
       [userId]
     );
+
+    // Get completed quest IDs
+      const [completedQuests] = await pool.execute(
+        `SELECT quest_id
+        FROM quest_progress
+        WHERE user_id = ? AND is_complete = 1`,
+        [userId]
+      );
+
+      const completedQuestIds = completedQuests.map(
+        q => Number(q.quest_id)
+      );
  
     console.log(`Dashboard loaded for user ${userId}`);
  
@@ -877,7 +893,9 @@ app.get('/api/dashboard_details/:uid', requireLogin, async (req, res) => {
           totalRelics: data.total_relics
         },
         badges: badges,
-        inventory: relics
+        inventory: relics,
+
+        completedQuestIds
       }
     });
  

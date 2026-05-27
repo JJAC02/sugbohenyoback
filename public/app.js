@@ -127,11 +127,11 @@ async function handleSignupSubmit(event) {
 
         const data = await response.json();
 
-        if (data.goods === 1) {
+        if (response.ok) {
             console.log('Account created successfully');
             window.location.href = '/adventure';
         } else {
-            handleSignupError(data.error || 'An error occurred');
+            handleSignupError(data);
         }
     } catch (error) {
         console.error('Signup error:', error);
@@ -256,15 +256,19 @@ function setFieldValid(fieldId, errorSuffix = null) {
 
 /**
  * Handle signup error from server
+ * Uses structured error response: { code, field, message }
  */
-function handleSignupError(errorMessage) {
-    if (errorMessage.toLowerCase().includes('username')) {
-        setFieldError('username', errorMessage);
-    } else if (errorMessage.toLowerCase().includes('email')) {
-        setFieldError('email', errorMessage);
-    } else {
-        window.alert(errorMessage);
+function handleSignupError(data) {
+    const message = data.message || 'An error occurred. Please try again.';
+
+    if (data.code === 'DUPLICATE_FIELD' && data.field) {
+        // Server told us exactly which field is taken
+        setFieldError(data.field, message);
+        return;
     }
+
+    // Fallback: surface the message as a general alert
+    window.alert(message);
 }
 
 
@@ -300,16 +304,40 @@ async function handleLoginSubmit(event) {
 
         const data = await response.json();
 
-        if (data.success) {
+        if (response.ok) {
             console.log('Login successful');
             window.location.href = '/adventure';
         } else {
-            showLoginError(data.message || 'Invalid username or password', 'password');
+            handleLoginError(data);
         }
     } catch (error) {
         console.error('Login error:', error);
         showLoginError('Connection error. Please try again.');
     }
+}
+
+
+/**
+ * Handle login error from server
+ * Uses structured error response: { code, fields, message }
+ */
+function handleLoginError(data) {
+    const message = data.message || 'An error occurred. Please try again.';
+
+    if (data.code === 'MISSING_FIELDS' && Array.isArray(data.fields)) {
+        // Highlight every missing field
+        data.fields.forEach(field => showLoginError(message, field));
+        return;
+    }
+
+    if (data.code === 'INVALID_CREDENTIALS') {
+        // Highlight both fields — don't reveal which one is wrong (security)
+        showLoginError(message, 'username');
+        showLoginError(message, 'password');
+        return;
+    }
+
+    showLoginError(message);
 }
 
 

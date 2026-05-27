@@ -488,7 +488,8 @@ async function getBadge(data) {
     ) {
       badgesToAward.push(8);
     }
-
+    console.log('completedQuestIds:', data.completedQuestIds);
+    console.log('full dashboard data:', data);
     // Badge 9 -> completed quest_id 10
     // ONLY if your API provides completedQuestIds
     if (
